@@ -230,6 +230,8 @@ function WebinarSchedule({ onRegisterClick }) {
               </div>
             </motion.div>
           ))}
+
+
         </div>
       </div>
     </section>
@@ -530,7 +532,7 @@ function Contact() {
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage() {
-  const [leads, setLeads] = useState({ contacts: [], registrations: [] });
+  const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
@@ -632,6 +634,9 @@ function LeadsAdminPage() {
             <button className={`admin-tab ${activeTab === 'registrations' ? 'active' : ''}`} onClick={() => setActiveTab('registrations')}>
               Webinar Registrations ({filteredRegs.length})
             </button>
+            <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
+              Site Analytics
+            </button>
           </div>
           <div className="admin-search-wrap">
             <input 
@@ -718,7 +723,57 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
+          </div>
         )}
+
+        {activeTab === 'analytics' && (
+          <div className="admin-list">
+            <h3 style={{ padding: '20px', color: 'var(--navy)' }}>Site Analytics</h3>
+            <div className="analytics-grid" style={{ padding: '0 20px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              
+              <div className="analytics-column" style={{ flex: 1, minWidth: '300px' }}>
+                <h4 style={{ marginBottom: '15px' }}>Recent Page Views</h4>
+                {leads.page_views?.length === 0 ? (
+                  <div className="admin-empty">No visits recorded yet.</div>
+                ) : (
+                  leads.page_views?.map(v => (
+                    <div key={v.id} className="admin-card" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '10px', marginBottom: '10px', borderLeft: '4px solid #49cd7a' }}>
+                      <div className="ac-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '1.1rem' }}>{v.page_url}</strong>
+                        <span className="ac-date" style={{ color: '#666', fontSize: '0.85rem' }}>{new Date(v.timestamp).toLocaleString()}</span>
+                      </div>
+                      <div className="ac-body" style={{ fontSize: '0.9rem', color: '#444' }}>
+                        <p style={{ margin: '4px 0' }}><strong>IP:</strong> {v.ip_address} | <strong>Device:</strong> {v.device}</p>
+                        <p style={{ margin: '4px 0' }}><strong>OS/Browser:</strong> {v.os} / {v.browser}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="analytics-column" style={{ flex: 1, minWidth: '300px' }}>
+                <h4 style={{ marginBottom: '15px' }}>Admin Logins</h4>
+                {leads.logins?.length === 0 ? (
+                  <div className="admin-empty">No logins recorded yet.</div>
+                ) : (
+                  leads.logins?.map(l => (
+                    <div key={l.id} className="admin-card" style={{ background: '#f8f9fa', padding: '15px', borderRadius: '10px', marginBottom: '10px', borderLeft: '4px solid #3366cc' }}>
+                      <div className="ac-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <strong style={{ fontSize: '1.1rem' }}>User: {l.username}</strong>
+                        <span className="ac-date" style={{ color: '#666', fontSize: '0.85rem' }}>{new Date(l.timestamp).toLocaleString()}</span>
+                      </div>
+                      <div className="ac-body" style={{ fontSize: '0.9rem', color: '#444' }}>
+                        <p style={{ margin: '4px 0' }}><strong>IP:</strong> {l.ip_address} | <strong>Status:</strong> {l.status}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </section>
   );
@@ -914,6 +969,24 @@ export default function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+
+  useEffect(() => {
+    // Track Page View
+    fetch(`${API_BASE_URL}/api/track/pageview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page_url: `/${page}` })
+    }).catch(err => console.error("Tracking failed:", err));
+
+    // Track Login specifically when admin dashboard is accessed
+    if (page === 'leads') {
+      fetch(`${API_BASE_URL}/api/track/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: "admin", status: "SUCCESS" })
+      }).catch(err => console.error("Tracking failed:", err));
+    }
+  }, [page]);
 
   return (
     <>
