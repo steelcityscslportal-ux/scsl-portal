@@ -723,7 +723,6 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
-          </div>
         )}
 
         {activeTab === 'analytics' && (

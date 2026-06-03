@@ -1546,7 +1546,7 @@ ul { list-style: none; }
   text-align: right;
 }
 .register-now-btn {
-  background: #ffcc00;
+  background: skyblue;
   color: #000;
   font-weight: 700;
   border: none;
@@ -1556,7 +1556,7 @@ ul { list-style: none; }
   transition: transform 0.2s ease, background 0.2s ease;
 }
 .register-now-btn:hover {
-  background: #e6b800;
+  background: deepskyblue;
   transform: scale(1.05);
 }
 .mode-badge.online {
