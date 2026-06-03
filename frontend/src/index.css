@@ -1,0 +1,6 @@
+/* All styles are in App.css — index.css reset only */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html { scroll-behavior: smooth; }
+body { margin: 0; }
