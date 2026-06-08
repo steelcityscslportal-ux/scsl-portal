@@ -55,4 +55,17 @@ class AdminLogin(Base):
     status = Column(String)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
+class AccountOpening(Base):
+    __tablename__ = "account_openings"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String, index=True)
+    phone = Column(String)
+    pan = Column(String)
+    aadhaar = Column(String)
+    dob = Column(String)
+    state = Column(String)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
+

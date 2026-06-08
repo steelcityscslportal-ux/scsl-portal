@@ -95,7 +95,7 @@ const navItems = [
   { label: 'Contact', href: '#contact' },
 ];
 
-function Navbar({ activePage }) {
+function Navbar({ activePage, onOpenAccountClick }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -124,7 +124,7 @@ function Navbar({ activePage }) {
         </nav>
         <div className="nav-cta">
           <a href="https://www.steelcitynettrade.com" target="_blank" rel="noreferrer" className="btn-ghost">Trade Now</a>
-          <a href="#contact" className="btn-solid">Open Account</a>
+          <button className="btn-solid" onClick={onOpenAccountClick} style={{ border: 'none', cursor: 'pointer' }}>Open Account</button>
         </div>
         <button className="hamburger" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
           {menuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -138,7 +138,7 @@ function Navbar({ activePage }) {
                 {n.label}
               </a>
             ))}
-            <a href="#contact" className="btn-solid mobile-btn" onClick={() => setMenuOpen(false)}>Open Account</a>
+            <button className="btn-solid mobile-btn" onClick={() => { setMenuOpen(false); onOpenAccountClick(); }} style={{ border: 'none', cursor: 'pointer' }}>Open Account</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -149,7 +149,7 @@ function Navbar({ activePage }) {
 /* ═══════════════════════════════════════════════
    3. HERO SECTION (HOME PAGE ONLY)
    ═══════════════════════════════════════════════ */
-function Hero() {
+function Hero({ onOpenAccountClick }) {
   return (
     <section className="hero-section">
       <div className="blob blob-1" />
@@ -160,7 +160,7 @@ function Hero() {
           <h1 className="hero-title">All Financial<br /><span className="gradient-text">Services Under</span><br />One Roof</h1>
           <p className="hero-desc">Confidence as strong as steel. Steel City Securities Limited has served over <strong>4 Lakh+ investors</strong> for 31 years across <strong>420+ locations</strong> in India — with integrity, trust, and dedication.</p>
           <div className="hero-actions">
-            <a href="#contact" className="btn-primary-lg">Open Trading Account <ChevronRight size={20} /></a>
+            <button onClick={onOpenAccountClick} className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer' }}>Open Trading Account <ChevronRight size={20} /></button>
             <a href="#webinars" className="btn-secondary-lg">Upcoming Webinars</a>
           </div>
           <div className="exchange-badges">
@@ -532,7 +532,7 @@ function Contact() {
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage() {
-  const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [] });
+  const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
@@ -559,7 +559,8 @@ function LeadsAdminPage() {
   }, []);
 
   const handleDelete = async (type, id) => {
-    if (!window.confirm(`Are you sure you want to delete this ${type === 'contact' ? 'lead' : 'registration'}?`)) return;
+    const typeLabel = type === 'contact' ? 'lead' : type === 'registration' ? 'webinar registration' : 'account opening request';
+    if (!window.confirm(`Are you sure you want to delete this ${typeLabel}?`)) return;
     try {
       const res = await fetch(`${API_BASE_URL}/api/leads/delete`, {
         method: 'DELETE',
@@ -591,13 +592,22 @@ function LeadsAdminPage() {
     r.topic.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filteredAccounts = (leads.account_openings || []).filter(a => 
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.email.toLowerCase().includes(search.toLowerCase()) ||
+    (a.phone && a.phone.includes(search)) ||
+    (a.pan && a.pan.toLowerCase().includes(search.toLowerCase())) ||
+    (a.aadhaar && a.aadhaar.includes(search)) ||
+    (a.state && a.state.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
     <section className="admin-section">
       <div className="container">
         <div className="admin-header">
           <div>
             <h1 className="admin-title">SCSL Admin Portal</h1>
-            <p className="admin-subtitle">Monitor inquiries and webinar registrations stored in SQLite</p>
+            <p className="admin-subtitle">Monitor inquiries, registrations, and account applications stored in cloud database</p>
           </div>
           <button className="btn-solid refresh-btn" onClick={fetchLeads}>Refresh Data</button>
         </div>
@@ -610,7 +620,7 @@ function LeadsAdminPage() {
 
         <div className="admin-stats-grid">
           <div className="astat-card">
-            <h4>Total Inquiries</h4>
+            <h4>General Inquiries</h4>
             <div className="astat-val">{leads.contacts.length}</div>
             <p>Contact form submissions</p>
           </div>
@@ -620,9 +630,9 @@ function LeadsAdminPage() {
             <p>Seats booked across all topics</p>
           </div>
           <div className="astat-card">
-            <h4>Total Records</h4>
-            <div className="astat-val">{leads.contacts.length + leads.registrations.length}</div>
-            <p>Persistent in SQLite database</p>
+            <h4>Account Openings</h4>
+            <div className="astat-val">{(leads.account_openings || []).length}</div>
+            <p>Demat & Trading account applications</p>
           </div>
         </div>
 
@@ -632,7 +642,10 @@ function LeadsAdminPage() {
               Contact Leads ({filteredContacts.length})
             </button>
             <button className={`admin-tab ${activeTab === 'registrations' ? 'active' : ''}`} onClick={() => setActiveTab('registrations')}>
-              Webinar Registrations ({filteredRegs.length})
+              Webinar Regs ({filteredRegs.length})
+            </button>
+            <button className={`admin-tab ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')}>
+              Account Openings ({filteredAccounts.length})
             </button>
             <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
               Site Analytics
@@ -641,7 +654,7 @@ function LeadsAdminPage() {
           <div className="admin-search-wrap">
             <input 
               type="text" 
-              placeholder="Search by name, email, phone or message..." 
+              placeholder="Search by name, email, phone, state or PAN..." 
               value={search} 
               onChange={e => setSearch(e.target.value)} 
               className="admin-search-input"
@@ -650,7 +663,7 @@ function LeadsAdminPage() {
         </div>
 
         {loading ? (
-          <div className="admin-loader">Loading records from SQLite...</div>
+          <div className="admin-loader">Loading records from database...</div>
         ) : activeTab === 'contacts' ? (
           <div className="admin-table-container">
             {filteredContacts.length === 0 ? (
@@ -686,7 +699,7 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'registrations' ? (
           <div className="admin-table-container">
             {filteredRegs.length === 0 ? (
               <div className="admin-empty">No webinar registrations found matching search.</div>
@@ -723,7 +736,48 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
-        )}
+        ) : activeTab === 'accounts' ? (
+          <div className="admin-table-container">
+            {filteredAccounts.length === 0 ? (
+              <div className="admin-empty">No account opening applications found matching search.</div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>PAN</th>
+                    <th>Aadhaar</th>
+                    <th>Date of Birth</th>
+                    <th>State/City</th>
+                    <th>Applied At</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAccounts.map(a => (
+                    <tr key={a.id}>
+                      <td>#{a.id}</td>
+                      <td className="bold">{a.name}</td>
+                      <td><a href={`mailto:${a.email}`}>{a.email}</a></td>
+                      <td>{a.phone}</td>
+                      <td className="bold" style={{ letterSpacing: '0.5px' }}>{a.pan}</td>
+                      <td>•••• •••• {a.aadhaar ? a.aadhaar.slice(-4) : ''}</td>
+                      <td>{a.dob}</td>
+                      <td>{a.state}</td>
+                      <td>{new Date(a.timestamp).toLocaleString()}</td>
+                      <td>
+                        <button className="delete-btn" onClick={() => handleDelete('account', a.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        ) : null}
 
         {activeTab === 'analytics' && (
           <div className="admin-list">
@@ -898,6 +952,107 @@ function WebinarRegistrationModal({ webinar, onClose }) {
   );
 }
 
+function OpenAccountModal({ onClose }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    pan: '',
+    aadhaar: '',
+    dob: '',
+    state: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/open-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        setSuccess(true);
+      } else {
+        const data = await res.json();
+        alert(data.detail || 'Failed to submit account opening request.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to backend server.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <motion.div className="modal-content" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} style={{ maxWidth: '520px' }}>
+        <button className="modal-close" onClick={onClose} aria-label="Close modal"><X size={20} /></button>
+        {success ? (
+          <div className="modal-success-state" style={{ textAlign: 'center', padding: '20px' }}>
+            <CheckCircle size={56} className="success-icon" style={{ color: 'var(--accent)', marginBottom: '15px' }} />
+            <h3 style={{ fontSize: '1.6rem', color: 'var(--navy)', marginBottom: '10px' }}>Application Submitted!</h3>
+            <p style={{ color: '#555', marginBottom: '10px' }}>Thank you <strong>{form.name}</strong>. Your Demat & Trading account opening application has been received.</p>
+            <p className="modal-email-note" style={{ color: '#888', fontSize: '0.9rem', marginBottom: '20px' }}>Our verification team will review your PAN/Aadhaar details and contact you shortly.</p>
+            <button className="btn-solid modal-done-btn" onClick={onClose} style={{ width: '100%' }}>Close Window</button>
+          </div>
+        ) : (
+          <form className="modal-form" onSubmit={handleSubmit}>
+            <h3>Open Demat & Trading Account</h3>
+            <p className="modal-sub">Quick, paperless, and secure onboarding.</p>
+            
+            <div className="mform-group">
+              <label>Full Name *</label>
+              <input type="text" placeholder="As per PAN Card" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} disabled={submitting} />
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="mform-group">
+                <label>Email Address *</label>
+                <input type="email" placeholder="name@domain.com" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} disabled={submitting} />
+              </div>
+              <div className="mform-group">
+                <label>Phone Number *</label>
+                <input type="tel" placeholder="10-digit mobile number" required value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} disabled={submitting} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="mform-group">
+                <label>PAN Card Number *</label>
+                <input type="text" placeholder="ABCDE1234F" required pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" title="Please enter a valid PAN (e.g. ABCDE1234F)" value={form.pan} onChange={e => setForm({ ...form, pan: e.target.value.toUpperCase() })} disabled={submitting} />
+              </div>
+              <div className="mform-group">
+                <label>Aadhaar Number *</label>
+                <input type="text" placeholder="12-digit Aadhaar" required pattern="[0-9]{12}" title="Please enter a 12-digit Aadhaar number" value={form.aadhaar} onChange={e => setForm({ ...form, aadhaar: e.target.value })} disabled={submitting} />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="mform-group">
+                <label>Date of Birth *</label>
+                <input type="date" required value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} disabled={submitting} />
+              </div>
+              <div className="mform-group">
+                <label>State *</label>
+                <input type="text" placeholder="State/City" required value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} disabled={submitting} />
+              </div>
+            </div>
+
+            <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting} style={{ marginTop: '15px' }}>
+              {submitting ? 'Submitting Details...' : 'Submit Application'}
+            </button>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    13. FOOTER
    ═══════════════════════════════════════════════ */
@@ -987,14 +1142,16 @@ export default function App() {
     }
   }, [page]);
 
+  const [showOpenAccount, setShowOpenAccount] = useState(false);
+
   return (
     <>
       <MarketTicker />
-      <Navbar activePage={page} />
+      <Navbar activePage={page} onOpenAccountClick={() => setShowOpenAccount(true)} />
       <main className="main-content">
         {page === 'home' && (
           <>
-            <Hero />
+            <Hero onOpenAccountClick={() => setShowOpenAccount(true)} />
             <StatsBar />
             <Services limit={3} />
             <Testimonials />
@@ -1015,6 +1172,11 @@ export default function App() {
           <WebinarRegistrationModal 
             webinar={registeringWebinar} 
             onClose={() => setRegisteringWebinar(null)} 
+          />
+        )}
+        {showOpenAccount && (
+          <OpenAccountModal 
+            onClose={() => setShowOpenAccount(false)} 
           />
         )}
       </AnimatePresence>

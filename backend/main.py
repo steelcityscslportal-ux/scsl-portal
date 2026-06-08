@@ -8,8 +8,10 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import urllib.request
+import json
 from sqlalchemy.orm import Session
-from database import SessionLocal, Contact, Registration, PageView, AdminLogin
+from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening
 from user_agents import parse
 
 app = FastAPI(title="SCSL Portal API", version="1.0.0")
@@ -48,7 +50,7 @@ class OTPRequest(BaseModel):
     email: str
 
 class DeleteRequest(BaseModel):
-    type: str  # "contact" or "registration"
+    type: str  # "contact" or "registration" or "account"
     id: int
 
 class PageViewReq(BaseModel):
@@ -58,22 +60,84 @@ class LoginReq(BaseModel):
     username: str
     status: str
 
+class AccountOpeningReq(BaseModel):
+    name: str
+    email: str
+    phone: str
+    pan: str
+    aadhaar: str
+    dob: str
+    state: str
+
 # ─── OTP Store (in-memory, email -> {otp, timestamp}) ────
 otp_store = {}
 OTP_EXPIRY_SECONDS = 600  # 10 minutes
 
-# ─── SMTP Configuration ──────────────────────────────────
+# ─── SMTP & Brevo Configuration ──────────────────────────
 SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "steelcityscslportal@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "nwgg kbty ngbo lcvc")
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
 def generate_otp():
     """Generate a unique 6-digit OTP"""
     return str(random.randint(100000, 999999))
 
+def send_otp_email_brevo(to_email: str, otp_code: str, html_content: str):
+    """Send OTP email using Brevo's HTTP API over port 443"""
+    url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+        "accept": "application/json"
+    }
+    payload = {
+        "sender": {"name": "Steel City Securities", "email": SMTP_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": "Your SCSL Webinar Registration OTP",
+        "htmlContent": html_content
+    }
+    try:
+        req = urllib.request.Request(
+            url, 
+            data=json.dumps(payload).encode("utf-8"), 
+            headers=headers, 
+            method="POST"
+        )
+        with urllib.request.urlopen(req) as response:
+            res_body = response.read().decode("utf-8")
+            print(f"[OTP SERVICE] Email sent successfully to {to_email} via Brevo API: {res_body}")
+            return True
+    except Exception as e:
+        print(f"[OTP SERVICE] Failed to send email via Brevo API: {e}")
+        return False
+
 def send_otp_email(to_email: str, otp_code: str):
-    """Send OTP to user's email via SMTP"""
+    """Send OTP to user's email via Brevo API or fallback to SMTP"""
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <div style="max-width: 480px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; padding: 30px; border: 1px solid #e0e0e0;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #0a1628; margin: 0;">Steel City Securities</h2>
+                <p style="color: #666; font-size: 14px;">Webinar Registration Verification</p>
+            </div>
+            <div style="background: white; border-radius: 8px; padding: 24px; text-align: center; margin: 20px 0;">
+                <p style="color: #333; font-size: 14px; margin: 0 0 12px 0;">Your One-Time Password is:</p>
+                <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0a1628; padding: 12px; background: #e8f0fe; border-radius: 8px;">
+                    {otp_code}
+                </div>
+            </div>
+            <p style="color: #888; font-size: 12px; text-align: center;">This OTP is valid for 10 minutes. Do not share it with anyone.</p>
+        </div>
+    </body>
+    </html>
+    """
+
+    if BREVO_API_KEY:
+        return send_otp_email_brevo(to_email, otp_code, html)
+        
     if not SMTP_PASSWORD:
         print(f"[OTP SERVICE] SMTP not configured. OTP for {to_email}: {otp_code}")
         return True
@@ -83,26 +147,6 @@ def send_otp_email(to_email: str, otp_code: str):
         msg["Subject"] = "Your SCSL Webinar Registration OTP"
         msg["From"] = f"Steel City Securities <{SMTP_EMAIL}>"
         msg["To"] = to_email
-
-        html = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px;">
-            <div style="max-width: 480px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; padding: 30px; border: 1px solid #e0e0e0;">
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="color: #0a1628; margin: 0;">Steel City Securities</h2>
-                    <p style="color: #666; font-size: 14px;">Webinar Registration Verification</p>
-                </div>
-                <div style="background: white; border-radius: 8px; padding: 24px; text-align: center; margin: 20px 0;">
-                    <p style="color: #333; font-size: 14px; margin: 0 0 12px 0;">Your One-Time Password is:</p>
-                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0a1628; padding: 12px; background: #e8f0fe; border-radius: 8px;">
-                        {otp_code}
-                    </div>
-                </div>
-                <p style="color: #888; font-size: 12px; text-align: center;">This OTP is valid for 10 minutes. Do not share it with anyone.</p>
-            </div>
-        </body>
-        </html>
-        """
         msg.attach(MIMEText(html, "html"))
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
@@ -247,26 +291,47 @@ async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_d
     db.commit()
     return {"success": True, "message": f"Successfully registered for: {reg.topic}!"}
 
+@app.post("/api/open-account")
+async def open_account(req: AccountOpeningReq, db: Session = Depends(get_db)):
+    opening = AccountOpening(
+        name=req.name,
+        email=req.email,
+        phone=req.phone,
+        pan=req.pan,
+        aadhaar=req.aadhaar,
+        dob=req.dob,
+        state=req.state
+    )
+    db.add(opening)
+    db.commit()
+    return {"success": True, "message": "Your account opening request has been submitted successfully!"}
+
 @app.get("/api/leads")
 async def get_leads(db: Session = Depends(get_db)):
     contacts = db.query(Contact).order_by(Contact.timestamp.desc()).all()
     registrations = db.query(Registration).order_by(Registration.timestamp.desc()).all()
     page_views = db.query(PageView).order_by(PageView.timestamp.desc()).all()
     logins = db.query(AdminLogin).order_by(AdminLogin.timestamp.desc()).all()
+    account_openings = db.query(AccountOpening).order_by(AccountOpening.timestamp.desc()).all()
     
     return {
         "contacts": contacts,
         "registrations": registrations,
         "page_views": page_views,
-        "logins": logins
+        "logins": logins,
+        "account_openings": account_openings
     }
 
 @app.delete("/api/leads/delete")
 async def delete_lead(req: DeleteRequest, db: Session = Depends(get_db)):
     if req.type == "contact":
         item = db.query(Contact).filter(Contact.id == req.id).first()
-    else:
+    elif req.type == "registration":
         item = db.query(Registration).filter(Registration.id == req.id).first()
+    elif req.type == "account":
+        item = db.query(AccountOpening).filter(AccountOpening.id == req.id).first()
+    else:
+        item = None
         
     if item:
         db.delete(item)
