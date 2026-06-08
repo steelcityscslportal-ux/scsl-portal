@@ -3,6 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import random
+import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
 from sqlalchemy.orm import Session
 from database import SessionLocal, Contact, Registration, PageView, AdminLogin
 from user_agents import parse
@@ -40,7 +45,7 @@ class WebinarRegistration(BaseModel):
     otp: str
 
 class OTPRequest(BaseModel):
-    phone: str
+    email: str
 
 class DeleteRequest(BaseModel):
     type: str  # "contact" or "registration"
@@ -52,6 +57,64 @@ class PageViewReq(BaseModel):
 class LoginReq(BaseModel):
     username: str
     status: str
+
+# ─── OTP Store (in-memory, email -> {otp, timestamp}) ────
+otp_store = {}
+OTP_EXPIRY_SECONDS = 600  # 10 minutes
+
+# ─── SMTP Configuration ──────────────────────────────────
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "steelcityotp@gmail.com")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+
+def generate_otp():
+    """Generate a unique 6-digit OTP"""
+    return str(random.randint(100000, 999999))
+
+def send_otp_email(to_email: str, otp_code: str):
+    """Send OTP to user's email via SMTP"""
+    if not SMTP_PASSWORD:
+        print(f"[OTP SERVICE] SMTP not configured. OTP for {to_email}: {otp_code}")
+        return True
+    
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your SCSL Webinar Registration OTP"
+        msg["From"] = f"Steel City Securities <{SMTP_EMAIL}>"
+        msg["To"] = to_email
+
+        html = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; padding: 20px;">
+            <div style="max-width: 480px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; padding: 30px; border: 1px solid #e0e0e0;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="color: #0a1628; margin: 0;">Steel City Securities</h2>
+                    <p style="color: #666; font-size: 14px;">Webinar Registration Verification</p>
+                </div>
+                <div style="background: white; border-radius: 8px; padding: 24px; text-align: center; margin: 20px 0;">
+                    <p style="color: #333; font-size: 14px; margin: 0 0 12px 0;">Your One-Time Password is:</p>
+                    <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #0a1628; padding: 12px; background: #e8f0fe; border-radius: 8px;">
+                        {otp_code}
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px; text-align: center;">This OTP is valid for 10 minutes. Do not share it with anyone.</p>
+            </div>
+        </body>
+        </html>
+        """
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        
+        print(f"[OTP SERVICE] Email sent successfully to {to_email}")
+        return True
+    except Exception as e:
+        print(f"[OTP SERVICE] Failed to send email: {e}")
+        return False
 
 # ─── Base market data with realistic simulation ───
 BASE_DATA = {
@@ -139,13 +202,43 @@ async def submit_contact(lead: ContactLead, db: Session = Depends(get_db)):
 
 @app.post("/api/register/request-otp")
 async def request_otp(req: OTPRequest):
-    print(f"[OTP SERVICE] Sending OTP '1234' to {req.phone}")
-    return {"success": True, "message": "OTP sent successfully"}
+    email = req.email.strip().lower()
+    otp_code = generate_otp()
+    
+    # Store OTP with timestamp
+    otp_store[email] = {"otp": otp_code, "timestamp": time.time()}
+    
+    # Send OTP via email
+    sent = send_otp_email(email, otp_code)
+    
+    if sent:
+        print(f"[OTP SERVICE] OTP '{otp_code}' generated for {email}")
+        return {"success": True, "message": f"OTP sent successfully to {email}"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
 
 @app.post("/api/register")
 async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_db)):
-    if reg.otp != "1234":
-        raise HTTPException(status_code=400, detail="Invalid OTP. Please use 1234.")
+    email = reg.email.strip().lower()
+    
+    # Check if OTP exists for this email
+    if email not in otp_store:
+        raise HTTPException(status_code=400, detail="No OTP was requested for this email. Please request an OTP first.")
+    
+    stored = otp_store[email]
+    
+    # Check OTP expiry
+    if time.time() - stored["timestamp"] > OTP_EXPIRY_SECONDS:
+        del otp_store[email]
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    
+    # Verify OTP
+    if reg.otp.strip() != stored["otp"]:
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please check and try again.")
+    
+    # OTP verified — remove it so it can't be reused
+    del otp_store[email]
+    
     registration = Registration(
         name=reg.name, email=reg.email, phone=reg.phone, 
         webinar_id=reg.webinar_id, topic=reg.topic, date=reg.date

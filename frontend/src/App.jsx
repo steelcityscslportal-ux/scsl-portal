@@ -795,13 +795,13 @@ function WebinarRegistrationModal({ webinar, onClose }) {
       const res = await fetch(`${API_BASE_URL}/api/register/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: form.phone })
+        body: JSON.stringify({ email: form.email })
       });
       if (res.ok) {
         setStep(2);
-        alert('OTP sent successfully to your number! (For this demo, please use OTP: 1234)');
       } else {
-        alert('Failed to send OTP. Please try again.');
+        const data = await res.json();
+        alert(data.detail || 'Failed to send OTP. Please try again.');
       }
     } catch (err) {
       console.error(err);
@@ -882,10 +882,10 @@ function WebinarRegistrationModal({ webinar, onClose }) {
         ) : (
           <form className="modal-form" onSubmit={handleVerifyOtp}>
             <h3>OTP Verification</h3>
-            <p className="modal-sub">An OTP has been sent to {form.phone}</p>
+            <p className="modal-sub">A 6-digit OTP has been sent to <strong>{form.email}</strong></p>
             <div className="mform-group">
-              <label>Enter 4-Digit OTP *</label>
-              <input type="text" maxLength="4" placeholder="1234" required value={otp} onChange={e => setOtp(e.target.value)} disabled={submitting} style={{ letterSpacing: '4px', fontSize: '1.2rem', textAlign: 'center' }} />
+              <label>Enter 6-Digit OTP *</label>
+              <input type="text" maxLength="6" placeholder="______" required value={otp} onChange={e => setOtp(e.target.value)} disabled={submitting} style={{ letterSpacing: '8px', fontSize: '1.4rem', textAlign: 'center', fontWeight: 'bold' }} />
             </div>
             <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting}>
               {submitting ? 'Verifying...' : 'Complete Registration'}
