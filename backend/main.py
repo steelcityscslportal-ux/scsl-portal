@@ -63,8 +63,8 @@ otp_store = {}
 OTP_EXPIRY_SECONDS = 600  # 10 minutes
 
 # ─── SMTP Configuration ──────────────────────────────────
-SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "steelcityotp@gmail.com")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_EMAIL = os.environ.get("SMTP_EMAIL", "steelcityscslportal@gmail.com")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "nwgg kbty ngbo lcvc")
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 
