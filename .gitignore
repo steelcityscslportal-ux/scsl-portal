@@ -1,0 +1,15 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Databases
+backend/leads.db
+*.db
+*.sqlite3
+
+# Node modules and build output (handled in frontend/.gitignore but good to have as fallback)
+node_modules/
+dist/
+.env
+local.properties
