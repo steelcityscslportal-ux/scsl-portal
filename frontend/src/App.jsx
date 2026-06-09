@@ -532,6 +532,12 @@ function Contact() {
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!sessionStorage.getItem('scsl_admin_auth'));
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [loggingIn, setLoggingIn] = useState(false);
+
   const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -539,34 +545,99 @@ function LeadsAdminPage() {
   const [activeTab, setActiveTab] = useState('contacts');
 
   const fetchLeads = async () => {
+    const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
+    if (!authHeaderVal) {
+      setIsAuthenticated(false);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/leads`);
+      const res = await fetch(`${API_BASE_URL}/api/leads`, {
+        headers: { 'Authorization': authHeaderVal }
+      });
+      if (res.status === 401) {
+        sessionStorage.removeItem('scsl_admin_auth');
+        setIsAuthenticated(false);
+        setError('Session expired or invalid credentials.');
+        return;
+      }
       if (!res.ok) throw new Error('Failed to fetch data from API');
       const data = await res.json();
       setLeads(data);
       setError(null);
     } catch (err) {
       console.error(err);
-      setError('Could not connect to backend server. Make sure the FastAPI backend is running on port 8000.');
+      setError('Could not connect to backend server. Make sure the FastAPI backend is running.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLeads();
-  }, []);
+    if (isAuthenticated) {
+      fetchLeads();
+    } else {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    setLoggingIn(true);
+    setLoginError('');
+    const authHeaderVal = 'Basic ' + btoa(usernameInput + ':' + passwordInput);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/leads`, {
+        headers: { 'Authorization': authHeaderVal }
+      });
+      if (res.ok) {
+        sessionStorage.setItem('scsl_admin_auth', authHeaderVal);
+        setIsAuthenticated(true);
+        const data = await res.json();
+        setLeads(data);
+        setError(null);
+      } else if (res.status === 401) {
+        setLoginError('Invalid username or password.');
+      } else {
+        setLoginError('Server error: ' + res.status);
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError('Could not connect to the backend server.');
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('scsl_admin_auth');
+    setIsAuthenticated(false);
+    setLeads({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [] });
+    setUsernameInput('');
+    setPasswordInput('');
+    setLoginError('');
+  };
 
   const handleDelete = async (type, id) => {
     const typeLabel = type === 'contact' ? 'lead' : type === 'registration' ? 'webinar registration' : 'account opening request';
     if (!window.confirm(`Are you sure you want to delete this ${typeLabel}?`)) return;
+    const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
     try {
       const res = await fetch(`${API_BASE_URL}/api/leads/delete`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': authHeaderVal || ''
+        },
         body: JSON.stringify({ type, id })
       });
+      if (res.status === 401) {
+        sessionStorage.removeItem('scsl_admin_auth');
+        setIsAuthenticated(false);
+        alert('Authentication failed. Please log in again.');
+        return;
+      }
       if (res.ok) {
         fetchLeads();
       } else {
@@ -601,15 +672,114 @@ function LeadsAdminPage() {
     (a.state && a.state.toLowerCase().includes(search.toLowerCase()))
   );
 
+  if (!isAuthenticated) {
+    return (
+      <section className="admin-login-section" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--offwhite)', padding: '40px 20px' }}>
+        <motion.div 
+          className="admin-login-card" 
+          initial={{ opacity: 0, y: 30 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.5 }}
+          style={{
+            background: 'var(--white)',
+            padding: '40px',
+            borderRadius: '24px',
+            boxShadow: 'var(--shadow-lg)',
+            width: '100%',
+            maxWidth: '440px',
+            border: '1px solid var(--light)'
+          }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <img src="https://www.steelcitynettrade.com/images/Steelcity-logo.png" alt="SCSL Logo" style={{ height: '45px', margin: '0 auto 20px auto' }} />
+            <h2 style={{ color: 'var(--navy)', fontWeight: 800, fontSize: '1.6rem', marginBottom: '8px' }}>Admin Portal</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '0.95rem' }}>Secure sign-in for authorized staff only</p>
+          </div>
+          
+          {loginError && (
+            <div style={{ background: '#FEE2E2', color: 'var(--red)', padding: '12px 16px', borderRadius: '10px', fontSize: '0.9rem', marginBottom: '20px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⚠️</span> {loginError}
+            </div>
+          )}
+          
+          <form onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="mform-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--navy)' }}>Username</label>
+              <input 
+                type="text" 
+                placeholder="Enter your username" 
+                required 
+                value={usernameInput} 
+                onChange={e => setUsernameInput(e.target.value)} 
+                disabled={loggingIn}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: 'var(--white)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'var(--transition)'
+                }}
+              />
+            </div>
+            
+            <div className="mform-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--navy)' }}>Password</label>
+              <input 
+                type="password" 
+                placeholder="Enter your password" 
+                required 
+                value={passwordInput} 
+                onChange={e => setPasswordInput(e.target.value)} 
+                disabled={loggingIn}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: 'var(--white)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'var(--transition)'
+                }}
+              />
+            </div>
+            
+            <button 
+              type="submit" 
+              className="btn-solid" 
+              disabled={loggingIn}
+              style={{ 
+                width: '100%', 
+                padding: '14px', 
+                fontSize: '1rem', 
+                marginTop: '10px',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {loggingIn ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+        </motion.div>
+      </section>
+    );
+  }
+
   return (
     <section className="admin-section">
       <div className="container">
-        <div className="admin-header">
+        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
           <div>
             <h1 className="admin-title">SCSL Admin Portal</h1>
             <p className="admin-subtitle">Monitor inquiries, registrations, and account applications stored in cloud database</p>
           </div>
-          <button className="btn-solid refresh-btn" onClick={fetchLeads}>Refresh Data</button>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button className="btn-solid refresh-btn" onClick={fetchLeads} style={{ border: 'none', cursor: 'pointer' }}>Refresh Data</button>
+            <button className="btn-ghost" onClick={handleLogout} style={{ border: '1.5px solid var(--sky)', color: 'var(--blue)', background: 'transparent', cursor: 'pointer' }}>Logout</button>
+          </div>
         </div>
 
         {error && (
