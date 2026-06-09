@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
 import urllib.request
+import urllib.error
 import json
 from sqlalchemy.orm import Session
 from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening
@@ -79,6 +80,7 @@ SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "nwgg kbty ngbo lcvc")
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+last_otp_error = "None"
 
 def generate_otp():
     """Generate a unique 6-digit OTP"""
@@ -109,8 +111,18 @@ def send_otp_email_brevo(to_email: str, otp_code: str, html_content: str):
             res_body = response.read().decode("utf-8")
             print(f"[OTP SERVICE] Email sent successfully to {to_email} via Brevo API: {res_body}")
             return True
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        msg = f"HTTP Error {e.code}: {error_body}"
+        print(f"[OTP SERVICE] Failed to send email via Brevo API: {msg}")
+        global last_otp_error
+        last_otp_error = msg
+        return False
     except Exception as e:
-        print(f"[OTP SERVICE] Failed to send email via Brevo API: {e}")
+        msg = f"Error: {e}"
+        print(f"[OTP SERVICE] Failed to send email via Brevo API: {msg}")
+        global last_otp_error
+        last_otp_error = msg
         return False
 
 def send_otp_email(to_email: str, otp_code: str):
@@ -348,7 +360,8 @@ async def diag():
         "has_brevo_key": bool(BREVO_API_KEY),
         "brevo_key_len": len(BREVO_API_KEY) if BREVO_API_KEY else 0,
         "brevo_key_prefix": BREVO_API_KEY[:10] if BREVO_API_KEY else "",
-        "sender_email": SMTP_EMAIL
+        "sender_email": SMTP_EMAIL,
+        "last_otp_error": last_otp_error
     }
 
 
