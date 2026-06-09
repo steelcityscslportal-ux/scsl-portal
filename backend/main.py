@@ -88,6 +88,7 @@ def generate_otp():
 
 def send_otp_email_brevo(to_email: str, otp_code: str, html_content: str):
     """Send OTP email using Brevo's HTTP API over port 443"""
+    global last_otp_error
     url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "api-key": BREVO_API_KEY,
@@ -115,13 +116,11 @@ def send_otp_email_brevo(to_email: str, otp_code: str, html_content: str):
         error_body = e.read().decode("utf-8")
         msg = f"HTTP Error {e.code}: {error_body}"
         print(f"[OTP SERVICE] Failed to send email via Brevo API: {msg}")
-        global last_otp_error
         last_otp_error = msg
         return False
     except Exception as e:
         msg = f"Error: {e}"
         print(f"[OTP SERVICE] Failed to send email via Brevo API: {msg}")
-        global last_otp_error
         last_otp_error = msg
         return False
 
