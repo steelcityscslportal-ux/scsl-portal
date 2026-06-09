@@ -342,6 +342,16 @@ async def delete_lead(req: DeleteRequest, db: Session = Depends(get_db)):
 async def health():
     return {"status": "healthy", "service": "SCSL Portal API"}
 
+@app.get("/api/diag")
+async def diag():
+    return {
+        "has_brevo_key": bool(BREVO_API_KEY),
+        "brevo_key_len": len(BREVO_API_KEY) if BREVO_API_KEY else 0,
+        "brevo_key_prefix": BREVO_API_KEY[:10] if BREVO_API_KEY else "",
+        "sender_email": SMTP_EMAIL
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
