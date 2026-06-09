@@ -1180,7 +1180,7 @@ function OpenAccountModal({ onClose }) {
               <input type="text" placeholder="As per PAN Card" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} disabled={submitting} />
             </div>
             
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="modal-grid-2">
               <div className="mform-group">
                 <label>Email Address *</label>
                 <input type="email" placeholder="name@domain.com" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} disabled={submitting} />
@@ -1191,7 +1191,7 @@ function OpenAccountModal({ onClose }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="modal-grid-2">
               <div className="mform-group">
                 <label>PAN Card Number *</label>
                 <input type="text" placeholder="ABCDE1234F" required pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}" title="Please enter a valid PAN (e.g. ABCDE1234F)" value={form.pan} onChange={e => setForm({ ...form, pan: e.target.value.toUpperCase() })} disabled={submitting} />
@@ -1202,7 +1202,7 @@ function OpenAccountModal({ onClose }) {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <div className="modal-grid-2">
               <div className="mform-group">
                 <label>Date of Birth *</label>
                 <input type="date" required value={form.dob} onChange={e => setForm({ ...form, dob: e.target.value })} disabled={submitting} />
