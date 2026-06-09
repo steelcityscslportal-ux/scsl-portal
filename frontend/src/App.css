@@ -480,8 +480,8 @@ ul { list-style: none; }
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(8px);
 }
-.pill-1 { top: 24px; left: -24px; }
-.pill-2 { top: 100px; left: -24px; }
+.pill-1 { top: 24px; left: 16px; }
+.pill-2 { top: 110px; left: 16px; }
 .pill-num { font-size: 1.4rem; font-weight: 900; color: var(--blue); line-height: 1; }
 .pill-lbl { font-size: 0.7rem; font-weight: 600; color: var(--muted); margin-top: 2px; }
 
