@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 from typing import Optional, List
 import random
@@ -11,6 +12,7 @@ import os
 import urllib.request
 import urllib.error
 import json
+import secrets
 from sqlalchemy.orm import Session
 from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening
 from user_agents import parse
@@ -81,6 +83,31 @@ SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "").strip()
 last_otp_error = "None"
+
+# ─── Admin Authentication Configuration ───────────────────
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "scsladmin123")
+security = HTTPBasic()
+
+def authenticate_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)):
+    correct_username = secrets.compare_digest(credentials.username, ADMIN_USERNAME)
+    correct_password = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    
+    status = "SUCCESS" if (correct_username and correct_password) else "FAILED"
+    ip = request.client.host
+    
+    # Save the login attempt to the database for audit logs
+    login_log = AdminLogin(username=credentials.username, ip_address=ip, status=status)
+    db.add(login_log)
+    db.commit()
+    
+    if not (correct_username and correct_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 def generate_otp():
     """Generate a unique 6-digit OTP"""
@@ -318,7 +345,7 @@ async def open_account(req: AccountOpeningReq, db: Session = Depends(get_db)):
     return {"success": True, "message": "Your account opening request has been submitted successfully!"}
 
 @app.get("/api/leads")
-async def get_leads(db: Session = Depends(get_db)):
+async def get_leads(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
     contacts = db.query(Contact).order_by(Contact.timestamp.desc()).all()
     registrations = db.query(Registration).order_by(Registration.timestamp.desc()).all()
     page_views = db.query(PageView).order_by(PageView.timestamp.desc()).all()
@@ -334,7 +361,7 @@ async def get_leads(db: Session = Depends(get_db)):
     }
 
 @app.delete("/api/leads/delete")
-async def delete_lead(req: DeleteRequest, db: Session = Depends(get_db)):
+async def delete_lead(req: DeleteRequest, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
     if req.type == "contact":
         item = db.query(Contact).filter(Contact.id == req.id).first()
     elif req.type == "registration":
