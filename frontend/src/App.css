@@ -1053,6 +1053,31 @@ ul { list-style: none; }
   position: relative;
   box-shadow: 0 24px 64px rgba(0, 31, 63, 0.25);
   border: 1px solid rgba(135, 206, 235, 0.4);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+@media (max-width: 576px) {
+  .modal-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .modal-content {
+    padding: 28px 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-form h3 {
+    font-size: 1.45rem;
+  }
+  .modal-close {
+    top: 16px;
+    right: 16px;
+  }
 }
 .modal-close {
   position: absolute;
