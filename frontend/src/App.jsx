@@ -169,14 +169,12 @@ function Hero({ onOpenAccountClick }) {
         </motion.div>
         <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
           <div className="ceo-float-card">
-            <div className="ceo-img-wrap"><img src="/ceo.jpg" alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
+            <div className="ceo-img-wrap"><img src="/ceo.png" alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
             <div className="ceo-details">
               <p className="ceo-name">Satish Kumar Arya</p>
               <p className="ceo-title">Managing Director & CEO</p>
               <p className="ceo-quote">"Building wealth, building trust — for every Indian investor."</p>
             </div>
-            <div className="stat-pill pill-1"><span className="pill-num">31+</span><span className="pill-lbl">Years Legacy</span></div>
-            <div className="stat-pill pill-2"><span className="pill-num">4L+</span><span className="pill-lbl">Clients</span></div>
           </div>
         </motion.div>
       </div>
@@ -299,15 +297,101 @@ function StatItem({ value, suffix, label, icon: Icon }) {
   );
 }
 
-function StatsBar() {
+function WhyWebinars() {
+  const features = [
+    {
+      title: "Why Watch SCSL Webinars?",
+      icon: Video,
+      color: "var(--sky)",
+      points: [
+        "Learn directly from SEBI-registered research analysts with decades of hands-on experience.",
+        "See live market charting, live trade setups, and real-time execution methods.",
+        "Get direct access to Q&A sessions to clarify your specific portfolio and trading queries."
+      ]
+    },
+    {
+      title: "Why Register in Advance?",
+      icon: Calendar,
+      color: "#FFD700",
+      points: [
+        "Secure priority seat reservation as live session rooms have limited capacity.",
+        "Receive custom trading templates, strategy spreadsheets, and market cheatsheets.",
+        "Get the full HD recorded session and summary notes sent directly to your inbox."
+      ]
+    },
+    {
+      title: "What is the Practical Use?",
+      icon: TrendingUp,
+      color: "var(--green)",
+      points: [
+        "Master risk-reward ratios, stop-loss strategy, and emotional discipline.",
+        "Build standalone trading plans for intraday, swing trading, and investing.",
+        "Receive post-webinar support and guidance from the SCSL support team."
+      ]
+    }
+  ];
+
   return (
-    <section className="stats-section">
-      <div className="container stats-grid">
-        <StatItem value={31}   suffix="+"  label="Years of Legacy"      icon={Award} />
-        <StatItem value={420}  suffix="+"  label="Locations Pan India"  icon={MapPin} />
-        <StatItem value={400}  suffix="K+" label="Active Clients"       icon={UserPlus} />
-        <StatItem value={1600} suffix="+"  label="Terminal Licenses"    icon={BarChart3} />
-        <StatItem value={22}   suffix=""   label="States (e-Governance)" icon={Globe} />
+    <section className="why-webinars-section" id="why-webinars">
+      <div className="why-webinars-blobs">
+        <div className="why-blob-1"></div>
+        <div className="why-blob-2"></div>
+      </div>
+      <div className="container">
+        <div className="section-header">
+          <span className="section-tag" style={{ background: 'rgba(135, 206, 235, 0.15)', color: 'var(--sky)' }}>Investor Empowerment</span>
+          <h2 className="section-title" style={{ color: 'var(--white)' }}>Why Choose SCSL Webinars?</h2>
+          <p className="section-sub" style={{ color: 'rgba(255, 255, 255, 0.7)', margin: '12px auto 0' }}>
+            Transform your understanding of the financial markets with professional guidance and actionable insights.
+          </p>
+        </div>
+
+        <div className="why-webinars-grid">
+          {features.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <motion.div 
+                className="why-card" 
+                key={idx}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: idx * 0.15 }}
+                whileHover={{ y: -8, transition: { duration: 0.2 } }}
+              >
+                <div className="why-card-glow" style={{ background: `radial-gradient(circle, ${item.color}10 0%, transparent 70%)` }} />
+                <div className="why-card-header">
+                  <div className="why-icon-wrap" style={{ border: `1.5px solid ${item.color}40`, color: item.color }}>
+                    <Icon size={24} />
+                  </div>
+                  <h3 className="why-card-title">{item.title}</h3>
+                </div>
+                <div className="why-card-divider" style={{ background: `linear-gradient(90deg, ${item.color}30, transparent)` }} />
+                <ul className="why-points-list">
+                  {item.points.map((pt, pIdx) => (
+                    <li key={pIdx}>
+                      <span className="why-check" style={{ color: item.color }}>✓</span>
+                      <p className="why-point-text">{pt}</p>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <motion.div 
+          className="why-cta-footer"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+        >
+          <p>Don't trade blindly. Build structural wealth with time-tested professional techniques.</p>
+          <a href="#webinars" className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer', marginTop: '15px' }}>
+            Browse Scheduled Webinars <ChevronRight size={20} />
+          </a>
+        </motion.div>
       </div>
     </section>
   );
@@ -1765,7 +1849,7 @@ export default function App() {
         {page === 'home' && (
           <>
             <Hero onOpenAccountClick={() => setShowOpenAccount(true)} />
-            <StatsBar />
+            <WhyWebinars />
             <Services limit={3} />
             <Testimonials />
           </>
