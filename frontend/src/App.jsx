@@ -242,6 +242,25 @@ function Hero({ onOpenAccountClick }) {
           <div className="exchange-badges">
             {['NSE', 'BSE', 'MCX', 'NSDL', 'CDSL', 'NCDEX'].map(e => <span key={e} className="exch-badge">{e}</span>)}
           </div>
+
+          <motion.div
+            className="hero-trust-row"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+          >
+            {[
+              { num: "31+", lbl: "Years of Trust" },
+              { num: "4L+", lbl: "Investors Served" },
+              { num: "420+", lbl: "Pan India Locations" },
+              { num: "22", lbl: "States (e-Gov)" },
+            ].map((stat, i) => (
+              <div className="hero-mini-stat" key={i}>
+                <span className="hero-mini-num">{stat.num}</span>
+                <span className="hero-mini-lbl">{stat.lbl}</span>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
         <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
           <div className="ceo-float-card">
