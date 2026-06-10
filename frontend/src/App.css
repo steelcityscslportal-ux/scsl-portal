@@ -2317,6 +2317,32 @@ ul { list-style: none; }
   margin-bottom: 24px;
 }
 
+.htp-split-layout {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 36px;
+  align-items: start;
+}
+
+.htp-split-left {
+  min-width: 0;
+}
+
+.htp-split-right {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.htp-split-right .hero-actions {
+  margin-bottom: 0;
+  gap: 12px;
+}
+
+.htp-split-right .exchange-badges {
+  margin-top: 4px;
+}
+
 .htp-header {
   margin-bottom: 16px;
 }
@@ -2469,6 +2495,13 @@ ul { list-style: none; }
 .htp-who-tag:hover {
   background: rgba(0,119,182,0.15);
   transform: scale(1.03);
+}
+
+@media (max-width: 990px) {
+  .htp-split-layout {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 
 @media (max-width: 900px) {
