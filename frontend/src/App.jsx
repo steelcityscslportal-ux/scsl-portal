@@ -4,7 +4,10 @@ import {
   BarChart3, ShieldCheck, UserPlus, Globe, PhoneCall,
   ChevronRight, TrendingUp, Award, Mail, MapPin,
   Menu, X, ArrowRight, CheckCircle, Star,
-  Landmark, Coins, PiggyBank, Calendar, Users, Video
+  Landmark, Coins, PiggyBank, Calendar, Users, Video,
+  Briefcase, Rocket, UserCheck, FileText, Laptop,
+  CreditCard, Activity, Search, Network, GraduationCap,
+  Home, BookOpen, Shield
 } from 'lucide-react';
 import './App.css';
 
@@ -90,6 +93,7 @@ const navItems = [
   { label: 'Home', href: '#home' },
   { label: 'Webinars', href: '#webinars' },
   { label: 'Services', href: '#services' },
+  { label: 'Services Hub', href: '#hub' },
   { label: 'Journey', href: '#journey' },
   { label: 'About Us', href: '#about' },
   { label: 'Contact', href: '#contact' },
@@ -150,6 +154,37 @@ function Navbar({ activePage, onOpenAccountClick }) {
    3. HERO SECTION (HOME PAGE ONLY)
    ═══════════════════════════════════════════════ */
 function Hero({ onOpenAccountClick }) {
+  const words = ["Stock Trading", "Smart Investing", "e-Gov Services", "Wealth Building"];
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex(prev => (prev + 1) % words.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const highlights = [
+    {
+      icon: TrendingUp,
+      color: "var(--sky)",
+      title: "Zero Brokerage Delivery",
+      desc: "Invest in stock markets with ₹0 brokerage on equity delivery trades."
+    },
+    {
+      icon: BarChart3,
+      color: "#FFD700",
+      title: "SmartTrade Platform",
+      desc: "Lightning-fast execution, advanced charting tools, and live data feeds."
+    },
+    {
+      icon: ShieldCheck,
+      color: "var(--green)",
+      title: "Integrated Depository & e-Gov",
+      desc: "Dematerialization under NSDL/CDSL alongside instant digital PAN & NPS."
+    }
+  ];
+
   return (
     <section className="hero-section">
       <div className="blob blob-1" />
@@ -157,8 +192,49 @@ function Hero({ onOpenAccountClick }) {
       <div className="container hero-grid">
         <motion.div className="hero-text" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
           <div className="hero-badge"><span className="badge-dot" />Established 1995 · ISO 9001:2015 Certified</div>
-          <h1 className="hero-title">All Financial<br /><span className="gradient-text">Services Under</span><br />One Roof</h1>
-          <p className="hero-desc">Confidence as strong as steel. Steel City Securities Limited has served over <strong>4 Lakh+ investors</strong> for 31 years across <strong>420+ locations</strong> in India — with integrity, trust, and dedication.</p>
+          <h1 className="hero-title">
+            Your Gateway to<br />
+            <span className="hero-title-rotate-container">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={index}
+                  className="gradient-text"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -20, opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: '100%', whiteSpace: 'nowrap' }}
+                >
+                  {words[index]}
+                </motion.span>
+              </AnimatePresence>
+            </span>
+          </h1>
+
+          <div className="hero-highlights">
+            {highlights.map((h, i) => {
+              const Icon = h.icon;
+              return (
+                <motion.div 
+                  key={i} 
+                  className="hero-highlight-card"
+                  initial={{ opacity: 0, x: -30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 * i }}
+                  whileHover={{ x: 6, transition: { duration: 0.2 } }}
+                >
+                  <div className="hero-hl-icon" style={{ background: `${h.color}15`, color: h.color }}>
+                    <Icon size={20} />
+                  </div>
+                  <div className="hero-hl-text">
+                    <h4>{h.title}</h4>
+                    <p>{h.desc}</p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
           <div className="hero-actions">
             <button onClick={onOpenAccountClick} className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer' }}>Open Trading Account <ChevronRight size={20} /></button>
             <a href="#webinars" className="btn-secondary-lg">Upcoming Webinars</a>
@@ -436,6 +512,298 @@ function Services({ limit }) {
         {limit && (
           <div style={{ textAlign: 'center', marginTop: '40px' }}>
             <a href="#services" className="btn-secondary-lg">View All Services</a>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+const hubServices = [
+  {
+    title: "Online Demat & Trading Account",
+    desc: "Start trading and investing with ease, fully online.",
+    url: "https://newekyc.steelcitynettrade.com/ekyc-admin/loginNew",
+    category: "broking",
+    icon: TrendingUp,
+    color: "#0077B6"
+  },
+  {
+    title: "Stock Broking Smart Trade",
+    desc: "Advanced tools for professional trading and high-speed execution.",
+    url: "https://etrade.steelcitynettrade.com/",
+    category: "broking",
+    icon: Rocket,
+    color: "#0077B6"
+  },
+  {
+    title: "Broking / DP Backoffice",
+    desc: "Seamless trade tracking, ledger reports, and account management.",
+    url: "https://weblogin.steelcitynettrade.com/WebLogin/index.cfm?Logintype=Branch",
+    category: "broking",
+    icon: Briefcase,
+    color: "#0077B6"
+  },
+  {
+    title: "Re-KYC Portal",
+    desc: "Stay compliant, hassle-free and update your account details online.",
+    url: "https://newekyc.steelcitynettrade.com/re-ekyc",
+    category: "broking",
+    icon: UserCheck,
+    color: "#0077B6"
+  },
+  {
+    title: "Mutual Funds",
+    desc: "Grow your wealth with expert-selected funds and regular SIP plans.",
+    url: "https://play.google.com/store/apps/details?id=com.steelcity.finsuite&hl=en_IN",
+    category: "broking",
+    icon: Coins,
+    color: "#0077B6"
+  },
+  {
+    title: "PAN Services",
+    desc: "Quick and easy PAN processing, digitally and paperlessly.",
+    url: "https://onlineservices.proteantech.in/paam/",
+    category: "egov",
+    icon: FileText,
+    color: "#0096C7"
+  },
+  {
+    title: "Instant PAN",
+    desc: "Get your digital PAN card generated in just four simple steps!",
+    url: "https://backoffice.steelcitynettrade.com/backoffice/PanRed/PAN_ReDirect.aspx",
+    category: "egov",
+    icon: Award,
+    color: "#0096C7"
+  },
+  {
+    title: "eGov Backoffice",
+    desc: "Seamless support for all your agency and e-Governance operations.",
+    url: "https://backoffice.steelcitynettrade.com/backoffice/SCwbb/login.aspx",
+    category: "egov",
+    icon: Laptop,
+    color: "#0096C7"
+  },
+  {
+    title: "eGov Registration",
+    desc: "Register new users easily online and activate branch services.",
+    url: "https://backoffice.steelcitynettrade.com/backoffice/APIBrachCreation/Tin_NewUserReg.aspx",
+    category: "egov",
+    icon: UserPlus,
+    color: "#0096C7"
+  },
+  {
+    title: "National Pension System (NPS)",
+    desc: "Plan your retirement with simple, reliable government-backed solutions.",
+    url: "https://mynps360direct.nps-proteantech.in/admin-app/realms/STC5000332",
+    category: "egov",
+    icon: PiggyBank,
+    color: "#0096C7"
+  },
+  {
+    title: "Bajaj Insta EMI",
+    desc: "Get instant EMI card options for all your utility and retail purchases.",
+    url: "https://www.bajajfinserv.in/webform/emicard/login?utm_source=Protean&utm_medium=field&utm_campaign=2000101",
+    category: "egov",
+    icon: CreditCard,
+    color: "#0096C7"
+  },
+  {
+    title: "Wellness Product",
+    desc: "Access unlimited tele-doctor consultation and healthcare perks.",
+    url: "https://partner.coversure.in/prosure/?source=Protean&password=s1crOqawgda6GFIMsu13d2WJ8WILc2soIbQvaltOKMN&agent_id=2000123",
+    category: "egov",
+    icon: Activity,
+    color: "#0096C7"
+  },
+  {
+    title: "Track PAN/TAN Application",
+    desc: "Check your PAN or TAN application progress online in real time.",
+    url: "https://tin.tin.proteantech.in/pantan/StatusTrack.html",
+    category: "egov",
+    icon: Search,
+    color: "#0096C7"
+  },
+  {
+    title: "Common Service Center (CSC)",
+    desc: "Access diverse government and business services via Digital Seva.",
+    url: "https://digitalseva.csc.gov.in/",
+    category: "egov",
+    icon: Network,
+    color: "#0096C7"
+  },
+  {
+    title: "Personal Loan",
+    desc: "Get funds quickly and digitally for your personal needs.",
+    url: "https://portal.fibe.in/easy-loan?utm_source=Protean&campaignid=2000123",
+    category: "loans",
+    icon: Coins,
+    color: "#00B4D8"
+  },
+  {
+    title: "Education Loan",
+    desc: "Invest in your academic future with hassle-free educational financing.",
+    url: "https://partnerships.propelld.com/?utm_source=protean&utm_agent=2000123",
+    category: "loans",
+    icon: GraduationCap,
+    color: "#00B4D8"
+  },
+  {
+    title: "Home Loan",
+    desc: "Own your dream home with easy financing terms and fast disbursal.",
+    url: "https://www.mahindrahomefinance.com/applyforloan/?utm_source=ProTean&utm_medium=Digital&utm_campaign=2000123",
+    category: "loans",
+    icon: Home,
+    color: "#00B4D8"
+  },
+  {
+    title: "Fixed Deposits",
+    desc: "Secure high returns with top-rated and trusted bank options.",
+    url: "https://fd.1silverbullet.tech/agent/customers",
+    category: "loans",
+    icon: Coins,
+    color: "#00B4D8"
+  },
+  {
+    title: "Wizr Marketplace",
+    desc: "Explore India's ultimate professional skilling and learning marketplace.",
+    url: "https://www.proteanlive.wizr.in/agent?utm_source=protean&utm_medium=social&utm_campaign=spring_sale&utm_content=ad_banner&utm_term=4555&paywall=true&agent=-2000123",
+    category: "loans",
+    icon: BookOpen,
+    color: "#00B4D8"
+  },
+  {
+    title: "Life & Health Insurance",
+    desc: "Comprehensive coverage across Life, Health, and General Insurance policies.",
+    url: "https://sellonline.tataaig.com/ipdsv2/login/#/login",
+    category: "insurance",
+    icon: Shield,
+    color: "#48CAE4"
+  },
+  {
+    title: "Referral Registration",
+    desc: "Join as a Steel City Referral Partner – Register and start earning.",
+    url: "https://backoffice.steelcitynettrade.com/backoffice/RefCreation/Ref_NewUserReg.aspx",
+    category: "corporate",
+    icon: Users,
+    color: "#0077B6"
+  },
+  {
+    title: "eMail Corporate Login",
+    desc: "Access your Steel City corporate email account securely.",
+    url: "https://mail.steelcitynettrade.com/",
+    category: "corporate",
+    icon: Mail,
+    color: "#0077B6"
+  },
+  {
+    title: "Employee Portal Login",
+    desc: "Login to the internal employee portal for updates, tasking, and logs.",
+    url: "https://backoffice.steelcitynettrade.com/backoffice/MARKETTING/LoginPage.aspx",
+    category: "corporate",
+    icon: UserCheck,
+    color: "#0077B6"
+  }
+];
+
+function ServicesHub() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeTab, setActiveTab] = useState("all");
+
+  const categories = [
+    { id: "all", label: "All Services" },
+    { id: "broking", label: "Stock Broking" },
+    { id: "egov", label: "e-Governance" },
+    { id: "loans", label: "Loans & FDs" },
+    { id: "insurance", label: "Insurance" },
+    { id: "corporate", label: "Partner & Employee" }
+  ];
+
+  const filteredServices = hubServices.filter(s => {
+    const matchesTab = activeTab === "all" || s.category === activeTab;
+    const matchesSearch = s.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          s.desc.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  return (
+    <section className="hub-section section">
+      <div className="hub-blobs">
+        <div className="hub-blob-1" />
+        <div className="hub-blob-2" />
+      </div>
+      <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+        <div className="section-header">
+          <span className="section-tag">Quick Action Center</span>
+          <h2 className="section-title">Steel City Services Hub</h2>
+          <p className="section-sub">Access all stock broking, depository, e-governance, loan products, and partner portal tools under one unified screen.</p>
+        </div>
+
+        <div className="hub-controls">
+          <div className="hub-search-wrapper">
+            <Search className="hub-search-icon" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search services (e.g. PAN, demat, loan...)" 
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="hub-search-input"
+            />
+            {searchTerm && <button className="hub-clear-btn" onClick={() => setSearchTerm("")}><X size={16} /></button>}
+          </div>
+
+          <div className="hub-tabs">
+            {categories.map(c => (
+              <button 
+                key={c.id} 
+                className={`hub-tab-btn ${activeTab === c.id ? 'active' : ''}`}
+                onClick={() => setActiveTab(c.id)}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {filteredServices.length === 0 ? (
+          <div className="hub-empty-state">
+            <p>No services found matching your criteria. Try searching for something else!</p>
+          </div>
+        ) : (
+          <div className="hub-grid">
+            <AnimatePresence mode="popLayout">
+              {filteredServices.map((svc) => {
+                const Icon = svc.icon;
+                return (
+                  <motion.a 
+                    key={svc.title}
+                    href={svc.url} 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="hub-card"
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
+                    whileHover={{ y: -8, boxShadow: '0 20px 40px rgba(0,119,182,0.18)' }}
+                  >
+                    <div className="hub-card-header">
+                      <div className="hub-icon-wrap" style={{ background: `${svc.color}15`, color: svc.color }}>
+                        <Icon size={24} />
+                      </div>
+                      <span className="hub-category-tag">{categories.find(c => c.id === svc.category)?.label}</span>
+                    </div>
+                    <h3 className="hub-card-title">{svc.title}</h3>
+                    <p className="hub-card-desc">{svc.desc}</p>
+                    <div className="hub-card-action">
+                      <span>Launch Service</span>
+                      <ArrowRight size={14} />
+                    </div>
+                  </motion.a>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
       </div>
@@ -1801,7 +2169,7 @@ function FloatingCTA() {
 export default function App() {
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '');
-    return ['home', 'webinars', 'services', 'journey', 'about', 'contact', 'leads'].includes(hash) ? hash : 'home';
+    return ['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash) ? hash : 'home';
   });
   
   const [registeringWebinar, setRegisteringWebinar] = useState(null);
@@ -1809,7 +2177,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'webinars', 'services', 'journey', 'about', 'contact', 'leads'].includes(hash)) {
+      if (['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash)) {
         setPage(hash);
         window.scrollTo(0, 0);
       } else if (hash === '') {
@@ -1856,6 +2224,7 @@ export default function App() {
         )}
         {page === 'webinars' && <WebinarSchedule onRegisterClick={setRegisteringWebinar} />}
         {page === 'services' && <Services />}
+        {page === 'hub' && <ServicesHub />}
         {page === 'journey' && <Journey />}
         {page === 'about' && <About />}
         {page === 'contact' && <Contact />}
