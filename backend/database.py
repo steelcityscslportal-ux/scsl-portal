@@ -92,3 +92,45 @@ class Webinar(Base):
 
 Base.metadata.create_all(bind=engine)
 
+def run_migrations():
+    from sqlalchemy import text
+    try:
+        with engine.begin() as conn:
+            is_sqlite = "sqlite" in str(engine.url)
+            if is_sqlite:
+                # SQLite ALTER TABLE doesn't support IF NOT EXISTS
+                cols = [
+                    ("webinars", "is_paid", "BOOLEAN DEFAULT 0"),
+                    ("webinars", "fee_amount", "REAL DEFAULT 0.0"),
+                    ("webinars", "payment_utr_required", "BOOLEAN DEFAULT 1"),
+                    ("registrations", "payment_utr", "TEXT DEFAULT ''"),
+                    ("registrations", "payment_status", "TEXT DEFAULT 'free'"),
+                    ("registrations", "fee_paid", "REAL DEFAULT 0.0")
+                ]
+                for table, col, definition in cols:
+                    try:
+                        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {definition}"))
+                        print(f"[MIGRATION] Added column {col} to {table}")
+                    except Exception:
+                        pass
+            else:
+                # PostgreSQL ALTER TABLE supports IF NOT EXISTS
+                statements = [
+                    "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;",
+                    "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS fee_amount DOUBLE PRECISION DEFAULT 0.0;",
+                    "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS payment_utr_required BOOLEAN DEFAULT TRUE;",
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_utr VARCHAR(255) DEFAULT '';",
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'free';",
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS fee_paid DOUBLE PRECISION DEFAULT 0.0;"
+                ]
+                for stmt in statements:
+                    try:
+                        conn.execute(text(stmt))
+                        print(f"[MIGRATION] Ran: {stmt}")
+                    except Exception as e:
+                        print(f"[MIGRATION] Error executing migration statement: {e}")
+    except Exception as e:
+        print(f"[MIGRATION] Error during startup migrations: {e}")
+
+run_migrations()
+
