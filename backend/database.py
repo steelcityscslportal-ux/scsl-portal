@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text, Boolean, Float
 from sqlalchemy.orm import declarative_base, sessionmaker
 import datetime
 import os
@@ -34,7 +34,11 @@ class Registration(Base):
     webinar_id = Column(Integer)
     topic = Column(String)
     date = Column(String)
+    payment_utr = Column(String, default="")        # Transaction UTR/reference
+    payment_status = Column(String, default="free") # "free", "paid", "pending"
+    fee_paid = Column(Float, default=0.0)           # Amount paid
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 class PageView(Base):
     __tablename__ = "page_views"
@@ -80,6 +84,10 @@ class Webinar(Base):
     seats = Column(Integer, default=200)
     link = Column(String, default="")
     avatar_url = Column(String, default="/host2.png")
+    # Payment fields
+    is_paid = Column(Boolean, default=False)
+    fee_amount = Column(Float, default=0.0)
+    payment_utr_required = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)

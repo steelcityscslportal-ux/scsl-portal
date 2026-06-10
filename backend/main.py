@@ -48,6 +48,7 @@ class WebinarRegistration(BaseModel):
     topic: str
     date: str
     otp: str
+    payment_utr: Optional[str] = ""  # UTR/transaction ref for paid webinars
 
 class OTPRequest(BaseModel):
     email: str
@@ -407,6 +408,9 @@ async def get_webinars(db: Session = Depends(get_db)):
             "link": w.link,
             "avatar_url": w.avatar_url,
             "registration_count": reg_count,
+            "is_paid": w.is_paid or False,
+            "fee_amount": w.fee_amount or 0.0,
+            "payment_utr_required": w.payment_utr_required if w.payment_utr_required is not None else True,
         })
     return result
 
@@ -422,6 +426,9 @@ class WebinarSaveReq(BaseModel):
     seats: int = 200
     link: str = ""
     avatar_url: str = "/host2.png"
+    is_paid: bool = False
+    fee_amount: float = 0.0
+    payment_utr_required: bool = True
 
 @app.post("/api/webinars/save")
 async def save_webinar(req: WebinarSaveReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
@@ -429,21 +436,26 @@ async def save_webinar(req: WebinarSaveReq, username: str = Depends(authenticate
         w = db.query(Webinar).filter(Webinar.id == req.id).first()
         if not w:
             raise HTTPException(status_code=404, detail="Webinar not found")
-        w.trainer    = req.trainer
-        w.region     = req.region
-        w.date       = req.date
-        w.day        = req.day
-        w.time       = req.time
-        w.topic      = req.topic
-        w.mode       = req.mode
-        w.seats      = req.seats
-        w.link       = req.link
-        w.avatar_url = req.avatar_url
+        w.trainer              = req.trainer
+        w.region               = req.region
+        w.date                 = req.date
+        w.day                  = req.day
+        w.time                 = req.time
+        w.topic                = req.topic
+        w.mode                 = req.mode
+        w.seats                = req.seats
+        w.link                 = req.link
+        w.avatar_url           = req.avatar_url
+        w.is_paid              = req.is_paid
+        w.fee_amount           = req.fee_amount
+        w.payment_utr_required = req.payment_utr_required
     else:
         w = Webinar(
             trainer=req.trainer, region=req.region, date=req.date,
             day=req.day, time=req.time, topic=req.topic, mode=req.mode,
-            seats=req.seats, link=req.link, avatar_url=req.avatar_url
+            seats=req.seats, link=req.link, avatar_url=req.avatar_url,
+            is_paid=req.is_paid, fee_amount=req.fee_amount,
+            payment_utr_required=req.payment_utr_required
         )
         db.add(w)
     db.commit()
@@ -552,16 +564,30 @@ async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_d
     # OTP verified — remove it so it can't be reused
     del otp_store[email]
     
+    # Look up webinar to get payment config
+    webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
+    
+    # Determine payment status
+    pay_status = "free"
+    fee_paid   = 0.0
+    if webinar and webinar.is_paid:
+        if webinar.payment_utr_required and not (reg.payment_utr or "").strip():
+            raise HTTPException(status_code=400, detail="Payment UTR/reference is required for this webinar. Please complete payment and enter your UTR.")
+        pay_status = "paid"
+        fee_paid   = webinar.fee_amount or 0.0
+    
     registration = Registration(
         name=reg.name, email=reg.email, phone=reg.phone, 
-        webinar_id=reg.webinar_id, topic=reg.topic, date=reg.date
+        webinar_id=reg.webinar_id, topic=reg.topic, date=reg.date,
+        payment_utr=reg.payment_utr or "",
+        payment_status=pay_status,
+        fee_paid=fee_paid
     )
     db.add(registration)
     db.commit()
 
     # Send confirmation email (best-effort — don't fail registration if email fails)
     try:
-        webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
         join_link = webinar.link if webinar and webinar.link else ""
         time_str  = webinar.time if webinar else reg.date
         send_registration_confirmation_email(

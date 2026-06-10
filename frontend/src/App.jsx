@@ -239,6 +239,15 @@ function WebinarSchedule({ onRegisterClick }) {
               </div>
               <div className="wtm-cell wtm-status">
                 <span className="mode-badge online">{w.mode}</span>
+                {w.is_paid ? (
+                  <span className="payment-badge paid" style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    💳 ₹{w.fee_amount}
+                  </span>
+                ) : (
+                  <span className="payment-badge free" style={{ background: '#dcfce7', color: '#16a34a', padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700, marginLeft: '8px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    🎉 Free
+                  </span>
+                )}
               </div>
               <div className="wtm-cell wtm-date">{w.date}</div>
               <div className="wtm-cell wtm-time">{w.time}</div>
@@ -546,7 +555,7 @@ function Contact() {
 /* ═══════════════════════════════════════════════
    11a. WEBINAR MANAGE TAB (Admin Sub-Component)
    ═══════════════════════════════════════════════ */
-const BLANK_WEBINAR = { id: null, trainer: '', region: '', date: '', day: '', time: '', topic: '', mode: 'Online', seats: 200, link: '', avatar_url: '/host2.png' };
+const BLANK_WEBINAR = { id: null, trainer: '', region: '', date: '', day: '', time: '', topic: '', mode: 'Online', seats: 200, link: '', avatar_url: '/host2.png', is_paid: false, fee_amount: 0, payment_utr_required: true };
 
 function WebinarManageTab({ authHeader, allRegistrations }) {
   const [webinars, setWebinars] = useState([]);
@@ -667,6 +676,11 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                        {w.is_paid && (
+                          <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700 }}>
+                            💳 ₹{w.fee_amount}
+                          </span>
+                        )}
                         <span style={{ background: '#e8f0fe', color: 'var(--blue)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
                           {regs.length} / {w.seats} registered
                         </span>
@@ -701,6 +715,8 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                               <th>Name</th>
                               <th>Email</th>
                               <th>Phone</th>
+                              {w.is_paid && <th>Payment</th>}
+                              {w.is_paid && <th>UTR Ref</th>}
                               <th>Registered At</th>
                             </tr>
                           </thead>
@@ -711,6 +727,14 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                                 <td className="bold">{r.name}</td>
                                 <td><a href={`mailto:${r.email}`}>{r.email}</a></td>
                                 <td>{r.phone || '-'}</td>
+                                {w.is_paid && (
+                                  <td>
+                                    <span style={{ background: r.payment_status === 'paid' ? '#dcfce7' : '#fee2e2', color: r.payment_status === 'paid' ? '#16a34a' : '#dc2626', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600 }}>
+                                      {r.payment_status === 'paid' ? `✓ ₹${r.fee_paid || w.fee_amount}` : 'Pending'}
+                                    </span>
+                                  </td>
+                                )}
+                                {w.is_paid && <td style={{ fontSize: '0.8rem', color: '#555' }}>{r.payment_utr || '—'}</td>}
                                 <td>{new Date(r.timestamp).toLocaleString()}</td>
                               </tr>
                             ))}
@@ -788,6 +812,43 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                 <div>
                   <label style={labelStyle}>Trainer Avatar URL</label>
                   <input style={inputStyle} value={formData.avatar_url} onChange={e => setFormData({...formData, avatar_url: e.target.value})} placeholder="/host2.png" />
+                </div>
+                  <div style={{ gridColumn: '1 / -1', background: '#f8fafc', borderRadius: '10px', padding: '16px', border: '1.5px solid #e2e8f0' }}>
+                  <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--navy)', marginBottom: '12px' }}>💳 Payment Settings</p>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px 16px', borderRadius: '8px', border: `2px solid ${!formData.is_paid ? 'var(--blue)' : '#e2e8f0'}`, background: !formData.is_paid ? '#e8f0fe' : 'white', fontWeight: 600, fontSize: '0.875rem' }}>
+                      <input type="radio" name="paytype" value="free" checked={!formData.is_paid} onChange={() => setFormData({...formData, is_paid: false, fee_amount: 0})} style={{ accentColor: 'var(--blue)' }} />
+                      🎉 Free Webinar
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px 16px', borderRadius: '8px', border: `2px solid ${formData.is_paid ? '#d97706' : '#e2e8f0'}`, background: formData.is_paid ? '#fef3c7' : 'white', fontWeight: 600, fontSize: '0.875rem' }}>
+                      <input type="radio" name="paytype" value="paid" checked={formData.is_paid} onChange={() => setFormData({...formData, is_paid: true})} style={{ accentColor: '#d97706' }} />
+                      💳 Paid Webinar
+                    </label>
+                  </div>
+                  {formData.is_paid && (
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                      <div style={{ flex: 1, minWidth: '160px' }}>
+                        <label style={labelStyle}>Fee Amount (₹) *</label>
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1.5px solid #d97706', borderRadius: '8px', overflow: 'hidden', background: 'white' }}>
+                          <span style={{ padding: '0 12px', background: '#fef3c7', fontWeight: 700, color: '#d97706', borderRight: '1px solid #d97706', fontSize: '1rem' }}>₹</span>
+                          <input
+                            style={{ ...inputStyle, border: 'none', borderRadius: 0, flex: 1 }}
+                            type="number" min="1" step="1"
+                            placeholder="e.g. 500"
+                            value={formData.fee_amount}
+                            onChange={e => setFormData({...formData, fee_amount: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <label style={labelStyle}>Require UTR Reference?</label>
+                        <select style={inputStyle} value={formData.payment_utr_required ? 'yes' : 'no'} onChange={e => setFormData({...formData, payment_utr_required: e.target.value === 'yes'})}>
+                          <option value="yes">Yes – Verify UTR from user</option>
+                          <option value="no">No – Trust user (no UTR needed)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
                   <button type="button" onClick={() => setShowForm(false)} style={{ padding: '12px 24px', borderRadius: '10px', border: '1.5px solid var(--light)', background: 'white', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
@@ -1290,6 +1351,7 @@ function WebinarRegistrationModal({ webinar, onClose }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [otp, setOtp] = useState('');
+  const [paymentUtr, setPaymentUtr] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -1316,8 +1378,20 @@ function WebinarRegistrationModal({ webinar, onClose }) {
     }
   };
 
-  const handleVerifyOtp = async (e) => {
+  const handleVerifyOtpStep = (e) => {
     e.preventDefault();
+    if (otp.trim().length !== 6) {
+      alert('Please enter a valid 6-digit OTP.');
+      return;
+    }
+    if (webinar.is_paid) {
+      setStep(3);
+    } else {
+      handleRegisterSubmit(otp, '');
+    }
+  };
+
+  const handleRegisterSubmit = async (otpValue, utrValue) => {
     setSubmitting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/register`, {
@@ -1330,43 +1404,95 @@ function WebinarRegistrationModal({ webinar, onClose }) {
           webinar_id: webinar.id,
           topic: webinar.topic,
           date: `${webinar.date} · ${webinar.time}`,
-          otp: otp
+          otp: otpValue,
+          payment_utr: utrValue
         })
       });
       if (res.ok) {
         setSuccess(true);
       } else {
         const data = await res.json();
-        alert(data.detail || 'Invalid OTP. Please try again.');
+        alert(data.detail || 'Invalid OTP or Registration failed. Please try again.');
       }
     } catch (err) {
       console.error(err);
-      alert('Error connecting to backend server. Make sure backend is running.');
+      alert('Error connecting to backend server.');
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handlePaymentSubmit = (e) => {
+    e.preventDefault();
+    if (webinar.payment_utr_required && !paymentUtr.trim()) {
+      alert('Please enter your transaction UPI Ref / UTR number.');
+      return;
+    }
+    handleRegisterSubmit(otp, paymentUtr);
+  };
+
+  const renderStepIndicator = () => {
+    const stepsList = [
+      { num: 1, label: 'Info' },
+      { num: 2, label: 'OTP' }
+    ];
+    if (webinar.is_paid) {
+      stepsList.push({ num: 3, label: 'Payment' });
+    }
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '0 auto 24px auto', maxWidth: '360px', gap: '8px' }}>
+        {stepsList.map((s, idx) => (
+          <React.Fragment key={s.num}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '50%',
+                background: step === s.num ? 'var(--blue)' : step > s.num ? '#16a34a' : '#e2e8f0',
+                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.75rem', fontWeight: 700
+              }}>
+                {step > s.num ? '✓' : s.num}
+              </div>
+              <span style={{ fontSize: '0.8rem', fontWeight: step === s.num ? 700 : 500, color: step === s.num ? 'var(--navy)' : 'var(--muted)' }}>
+                {s.label}
+              </span>
+            </div>
+            {idx < stepsList.length - 1 && (
+              <div style={{ flex: 1, height: '2px', background: step > s.num ? '#16a34a' : '#e2e8f0', minWidth: '15px' }} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="modal-overlay">
-      <motion.div className="modal-content" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
+      <motion.div className="modal-content" style={{ maxWidth: step === 3 ? '520px' : '450px' }} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}>
         <button className="modal-close" onClick={onClose} aria-label="Close modal"><X size={20} /></button>
+        
+        {!success && renderStepIndicator()}
+
         {success ? (
           <div className="modal-success-state">
             <CheckCircle size={56} className="success-icon" />
             <h3>Seat Reserved Successfully!</h3>
             <p>You have registered for <strong>{webinar.topic}</strong>.</p>
             <p className="modal-date-info">📅 {webinar.date} at {webinar.time}</p>
-            <p className="modal-email-note">Your contact details have been successfully verified.</p>
+            {webinar.is_paid ? (
+              <p className="modal-email-note" style={{ color: '#d97706', fontWeight: 600 }}>Your payment transaction is under review. Joining details will be verified shortly.</p>
+            ) : (
+              <p className="modal-email-note">A confirmation email has been sent with meeting details.</p>
+            )}
             <button className="btn-solid modal-done-btn" onClick={onClose}>Close Window</button>
           </div>
         ) : step === 1 ? (
           <form className="modal-form" onSubmit={handleRequestOtp}>
             <h3>Register for Webinar</h3>
-            <p className="modal-sub">Secure your free seat for this live session.</p>
-            <div className="modal-webinar-details">
+            <p className="modal-sub">{webinar.is_paid ? 'Join this premium session today.' : 'Secure your free seat for this live session.'}</p>
+            <div className="modal-webinar-details" style={{ borderLeft: webinar.is_paid ? '4px solid #d97706' : '4px solid var(--blue)' }}>
               <p className="topic"><strong>Topic:</strong> {webinar.topic}</p>
               <p className="date"><strong>Schedule:</strong> {webinar.date} · {webinar.time}</p>
+              {webinar.is_paid && <p className="price" style={{ color: '#d97706', fontWeight: 700, margin: '4px 0 0 0' }}>💳 Fee: ₹{webinar.fee_amount}</p>}
             </div>
             <div className="mform-group">
               <label>Full Name *</label>
@@ -1384,8 +1510,8 @@ function WebinarRegistrationModal({ webinar, onClose }) {
               {submitting ? 'Sending OTP...' : 'Proceed to Verify'}
             </button>
           </form>
-        ) : (
-          <form className="modal-form" onSubmit={handleVerifyOtp}>
+        ) : step === 2 ? (
+          <form className="modal-form" onSubmit={handleVerifyOtpStep}>
             <h3>OTP Verification</h3>
             <p className="modal-sub">A 6-digit OTP has been sent to <strong>{form.email}</strong></p>
             <div className="mform-group">
@@ -1393,9 +1519,45 @@ function WebinarRegistrationModal({ webinar, onClose }) {
               <input type="text" maxLength="6" placeholder="______" required value={otp} onChange={e => setOtp(e.target.value)} disabled={submitting} style={{ letterSpacing: '8px', fontSize: '1.4rem', textAlign: 'center', fontWeight: 'bold' }} />
             </div>
             <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting}>
-              {submitting ? 'Verifying...' : 'Complete Registration'}
+              {submitting ? 'Verifying...' : webinar.is_paid ? 'Proceed to Payment' : 'Complete Registration'}
             </button>
             <button type="button" className="btn-secondary-lg w-full mt-2" onClick={() => setStep(1)} disabled={submitting}>Back</button>
+          </form>
+        ) : (
+          <form className="modal-form" onSubmit={handlePaymentSubmit}>
+            <h3>Webinar Payment</h3>
+            <p className="modal-sub">Scan the QR code below to make payment of ₹{webinar.fee_amount}.</p>
+            
+            <div className="payment-box" style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center', margin: '12px 0' }}>
+              <span style={{ background: '#fef3c7', color: '#d97706', padding: '6px 14px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 800 }}>
+                💳 Fee Amount: ₹{webinar.fee_amount}
+              </span>
+              
+              <div style={{ margin: '14px auto', maxWidth: '180px', background: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+                <img src="/phonepe-qr.png" alt="PhonePe QR Code" style={{ width: '100%', height: 'auto', display: 'block' }} />
+              </div>
+              
+              <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>UPI Payee Name:</p>
+              <p style={{ margin: '0', fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy)' }}>Mr KOPPISETTI VENKATASIVA RAMAKRISHNA</p>
+            </div>
+            
+            <div className="mform-group">
+              <label>Transaction UPI Ref / UTR Number {webinar.payment_utr_required ? '*' : '(Optional)'}</label>
+              <input 
+                type="text" 
+                placeholder="12-digit transaction ID (e.g. 3081...)" 
+                required={webinar.payment_utr_required} 
+                value={paymentUtr} 
+                onChange={e => setPaymentUtr(e.target.value.replace(/\D/g, '').slice(0, 12))} 
+                disabled={submitting} 
+              />
+              <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '4px', lineHeight: '1.2' }}>UPI Ref / UTR is a 12-digit number found in your payment app confirmation screen.</p>
+            </div>
+            
+            <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting}>
+              {submitting ? 'Verifying & Completing...' : 'Verify & Complete Registration'}
+            </button>
+            <button type="button" className="btn-secondary-lg w-full mt-2" onClick={() => setStep(2)} disabled={submitting}>Back to OTP</button>
           </form>
         )}
       </motion.div>
