@@ -90,6 +90,16 @@ class Webinar(Base):
     payment_utr_required = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
+class Feedback(Base):
+    __tablename__ = "feedbacks"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    email = Column(String)
+    rating = Column(Integer)
+    comment = Column(Text)
+    is_approved = Column(Boolean, default=False)  # Hidden until admin approves
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 
 def run_migrations():

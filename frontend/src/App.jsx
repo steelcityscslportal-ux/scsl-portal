@@ -275,135 +275,136 @@ function Hero({ onOpenAccountClick }) {
     <section className="hero-section">
       <div className="blob blob-1" />
       <div className="blob blob-2" />
-      <div className="container hero-grid">
-        <motion.div className="hero-text" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-          <div className="hero-slideshow-wrapper">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={slideIndex}
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }}
-                transition={{ duration: 0.4 }}
-                className="hero-slide"
-              >
-                <div className="slide-content">
-                  <div className="slide-badge"><span className="badge-dot" />{slides[slideIndex].badge}</div>
-                  <h2 className="slide-title">
-                    {slides[slideIndex].title}
-                  </h2>
-                  <p className="slide-subtitle">
-                    {slides[slideIndex].subtitle}
-                  </p>
-                  <p className="slide-desc">
-                    {slides[slideIndex].desc}
-                  </p>
-                </div>
-                <div className="slide-image-container">
-                  <img
-                    src={slides[slideIndex].image}
-                    alt={slides[slideIndex].title}
-                  />
-                </div>
-              </motion.div>
-            </AnimatePresence>
-            
-            <div className="slide-dots">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSlideIndex(i)}
-                  className="slide-dot"
-                  style={{
-                    width: slideIndex === i ? '20px' : '6px',
-                    background: slideIndex === i ? 'var(--blue)' : '#cbd5e1'
-                  }}
-                  aria-label={`Go to slide ${i + 1}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Training Program Info Panel */}
-          <motion.div
-            className="hero-training-panel"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <div className="htp-header">
-              <span className="htp-tag"><TrendingUp size={14} /> Stock Market Training Program</span>
-              <h2 className="htp-headline">Master the Markets. <span className="htp-accent">Trade with Confidence.</span></h2>
-              <p className="htp-lead">Are you interested in the Stock Market but don't know where to start? Join our comprehensive online training program and learn from experienced market professionals.</p>
-            </div>
-
-            <div className="htp-split-layout">
-              <div className="htp-split-left">
-                <div className="htp-modules-grid">
-                  {[
-                    { icon: BarChart3, color: "#0077b6", label: "Stock Market Basics", items: ["NSE & BSE Overview", "Demat & Trading Accounts", "Types of Orders (Market, Limit, SL)"] },
-                    { icon: TrendingUp, color: "#059669", label: "Trading Strategies", items: ["Intraday & Swing Trading", "Positional & Delivery Trading", "Understanding Market Trends"] },
-                    { icon: Activity, color: "#d97706", label: "Technical Analysis", items: ["Candlestick Patterns", "RSI, MACD & Moving Averages", "Support, Resistance & Volume"] },
-                    { icon: ShieldCheck, color: "#7c3aed", label: "Risk Management", items: ["Capital Protection Strategies", "Stop Loss & Position Sizing", "Risk-Reward Ratio"] },
-                    { icon: PiggyBank, color: "#0891b2", label: "Wealth Creation", items: ["Long-Term Investing & SIP", "NPS & Retirement Planning", "Portfolio Diversification"] },
-                    { icon: Star, color: "#dc2626", label: "Program Benefits", items: ["Live Online Sessions & Q&A", "Real Chart Analysis", "Trading Psychology Guidance"] },
-                  ].map((mod, i) => {
-                    const Icon = mod.icon;
-                    return (
-                      <motion.div
-                        key={i}
-                        className="htp-module-card"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.4, delay: 0.05 * i }}
-                        whileHover={{ y: -3, transition: { duration: 0.2 } }}
-                      >
-                        <div className="htp-mod-icon" style={{ background: `${mod.color}12`, color: mod.color }}>
-                          <Icon size={16} />
-                        </div>
-                        <div className="htp-mod-content">
-                          <span className="htp-mod-label">{mod.label}</span>
-                          <ul className="htp-mod-items">
-                            {mod.items.map((item, j) => <li key={j}>✅ {item}</li>)}
-                          </ul>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="htp-split-right">
-                <div className="htp-who">
-                  <span className="htp-who-label">👥 Who Should Attend?</span>
-                  <div className="htp-who-tags">
-                    {["New Traders", "Working Professionals", "Students", "Business Owners", "Housewives", "Existing Investors"].map(t => (
-                      <span key={t} className="htp-who-tag">{t}</span>
-                    ))}
+      <div className="container">
+        <div className="hero-grid">
+          <motion.div className="hero-text" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+            <div className="hero-slideshow-wrapper">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={slideIndex}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.4 }}
+                  className="hero-slide"
+                >
+                  <div className="slide-content">
+                    <div className="slide-badge"><span className="badge-dot" />{slides[slideIndex].badge}</div>
+                    <h2 className="slide-title">
+                      {slides[slideIndex].title}
+                    </h2>
+                    <p className="slide-subtitle">
+                      {slides[slideIndex].subtitle}
+                    </p>
+                    <p className="slide-desc">
+                      {slides[slideIndex].desc}
+                    </p>
                   </div>
-                </div>
-
-                <div className="hero-actions">
-                  <button onClick={onOpenAccountClick} className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer' }}>Open Trading Account <ChevronRight size={20} /></button>
-                  <a href="#webinars" className="btn-secondary-lg">Register Free Now</a>
-                </div>
-
-                <div className="exchange-badges">
-                  {['NSE', 'BSE', 'MCX', 'NSDL', 'CDSL', 'NCDEX'].map(e => <span key={e} className="exch-badge">{e}</span>)}
-                </div>
+                  <div className="slide-image-container">
+                    <img
+                      src={slides[slideIndex].image}
+                      alt={slides[slideIndex].title}
+                    />
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+              
+              <div className="slide-dots">
+                {slides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSlideIndex(i)}
+                    className="slide-dot"
+                    style={{
+                      width: slideIndex === i ? '20px' : '6px',
+                      background: slideIndex === i ? 'var(--blue)' : '#cbd5e1'
+                    }}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
               </div>
             </div>
           </motion.div>
 
+          <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
+            <div className="ceo-float-card">
+              <div className="ceo-img-wrap"><img src="/ceo.png" alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
+              <div className="ceo-details">
+                <p className="ceo-name">Satish Kumar Arya</p>
+                <p className="ceo-title">Managing Director & CEO</p>
+                <p className="ceo-quote">"Building wealth, building trust — for every Indian investor."</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
 
-        </motion.div>
-        <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
-          <div className="ceo-float-card">
-            <div className="ceo-img-wrap"><img src="/ceo.png" alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
-            <div className="ceo-details">
-              <p className="ceo-name">Satish Kumar Arya</p>
-              <p className="ceo-title">Managing Director & CEO</p>
-              <p className="ceo-quote">"Building wealth, building trust — for every Indian investor."</p>
+        {/* Training Program Info Panel */}
+        <motion.div
+          className="hero-training-panel"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="htp-header">
+            <span className="htp-tag"><TrendingUp size={14} /> Stock Market Training Program</span>
+            <h2 className="htp-headline">Master the Markets. <span className="htp-accent">Trade with Confidence.</span></h2>
+            <p className="htp-lead">Are you interested in the Stock Market but don't know where to start? Join our comprehensive online training program and learn from experienced market professionals.</p>
+          </div>
+
+          <div className="htp-split-layout">
+            <div className="htp-split-left">
+              <div className="htp-modules-grid">
+                {[
+                  { icon: BarChart3, color: "#0077b6", label: "Stock Market Basics", items: ["NSE & BSE Overview", "Demat & Trading Accounts", "Types of Orders (Market, Limit, SL)"] },
+                  { icon: TrendingUp, color: "#059669", label: "Trading Strategies", items: ["Intraday & Swing Trading", "Positional & Delivery Trading", "Understanding Market Trends"] },
+                  { icon: Activity, color: "#d97706", label: "Technical Analysis", items: ["Candlestick Patterns", "RSI, MACD & Moving Averages", "Support, Resistance & Volume"] },
+                  { icon: ShieldCheck, color: "#7c3aed", label: "Risk Management", items: ["Capital Protection Strategies", "Stop Loss & Position Sizing", "Risk-Reward Ratio"] },
+                  { icon: PiggyBank, color: "#0891b2", label: "Wealth Creation", items: ["Long-Term Investing & SIP", "NPS & Retirement Planning", "Portfolio Diversification"] },
+                  { icon: Star, color: "#dc2626", label: "Program Benefits", items: ["Live Online Sessions & Q&A", "Real Chart Analysis", "Trading Psychology Guidance"] },
+                ].map((mod, i) => {
+                  const Icon = mod.icon;
+                  return (
+                    <motion.div
+                      key={i}
+                      className="htp-module-card"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4, delay: 0.05 * i }}
+                      whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                    >
+                      <div className="htp-mod-icon" style={{ background: `${mod.color}12`, color: mod.color }}>
+                        <Icon size={16} />
+                      </div>
+                      <div className="htp-mod-content">
+                        <span className="htp-mod-label">{mod.label}</span>
+                        <ul className="htp-mod-items">
+                          {mod.items.map((item, j) => <li key={j}>✅ {item}</li>)}
+                        </ul>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="htp-split-right">
+              <div className="htp-who">
+                <span className="htp-who-label">👥 Who Should Attend?</span>
+                <div className="htp-who-tags">
+                  {["New Traders", "Working Professionals", "Students", "Business Owners", "Housewives", "Existing Investors"].map(t => (
+                    <span key={t} className="htp-who-tag">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hero-actions">
+                <button onClick={onOpenAccountClick} className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer' }}>Open Trading Account <ChevronRight size={20} /></button>
+                <a href="#webinars" className="btn-secondary-lg">Register Free Now</a>
+              </div>
+
+              <div className="exchange-badges">
+                {['NSE', 'BSE', 'MCX', 'NSDL', 'CDSL', 'NCDEX'].map(e => <span key={e} className="exch-badge">{e}</span>)}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -1097,6 +1098,515 @@ function Testimonials() {
 }
 
 /* ═══════════════════════════════════════════════
+   9b. FEEDBACK & REVIEW SECTION
+   ═══════════════════════════════════════════════ */
+function FeedbackSection() {
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [form, setForm] = useState({ name: '', email: '', rating: 5, comment: '' });
+  const [hoverRating, setHoverRating] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [lastClickedStar, setLastClickedStar] = useState(null);
+
+  const handleMouseMove = (e) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const xc = rect.width / 2;
+    const yc = rect.height / 2;
+    const angleX = ((yc - y) / yc) * 10;
+    const angleY = ((x - xc) / xc) * 10;
+    card.style.setProperty('--rotate-x', `${angleX}deg`);
+    card.style.setProperty('--rotate-y', `${angleY}deg`);
+  };
+
+  const handleMouseLeave = (e) => {
+    const card = e.currentTarget;
+    card.style.transition = 'transform 0.5s cubic-bezier(0.23, 1, 0.32, 1)';
+    card.style.setProperty('--rotate-x', '0deg');
+    card.style.setProperty('--rotate-y', '0deg');
+    setTimeout(() => { card.style.transition = ''; }, 500);
+  };
+
+  const fetchFeedbacks = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/feedback`);
+      if (res.ok) {
+        const data = await res.json();
+        setFeedbacks(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch feedbacks:", err);
+    }
+  };
+
+  useEffect(() => { fetchFeedbacks(); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.comment.trim()) {
+      setError("Please fill in all required fields.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        setSubmitted(true);
+        setForm({ name: '', email: '', rating: 5, comment: '' });
+        fetchFeedbacks();
+      } else {
+        const errData = await res.json();
+        setError(errData.detail || "Failed to submit feedback.");
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const allReviews = [
+    { id: 't1', name: 'Rajesh Venkata', comment: "SCSL's research desk gives top-quality F&O calls. I've been trading with them for 8 years and the back-office is truly 24x7.", rating: 5 },
+    { id: 't2', name: 'Priya Subramaniam', comment: 'As a sub-broker, the terminal support and seamless connectivity has helped me grow my client base significantly.', rating: 5 },
+    { id: 't3', name: 'V. Krishna Murthy', comment: 'I trust SCSL for my NPS and Mutual Fund SIPs. The team is always professional and responsive.', rating: 5 },
+    ...feedbacks
+  ];
+
+  return (
+    <section className="feedback-section" id="feedback">
+      <div className="container feedback-grid-layout">
+        <div className="feedback-display">
+          <div className="section-header align-left">
+            <span className="section-tag">Client Reviews</span>
+            <h2 className="section-title">Investor Experiences</h2>
+            <p className="section-desc">See what our clients say about their journey with Steel City Securities Limited.</p>
+          </div>
+          <div className="reviews-list-container">
+            {allReviews.map((review, idx) => (
+              <div 
+                key={review.id || `f-${idx}`} 
+                className="review-item-card"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <div className="review-header">
+                  <div className="review-avatar">{review.name.charAt(0).toUpperCase()}</div>
+                  <div className="review-meta">
+                    <p className="review-author-name">{review.name}</p>
+                    <div className="review-stars-row">
+                      {Array(5).fill(0).map((_, idx2) => (
+                        <Star 
+                          key={idx2} 
+                          size={14} 
+                          fill={idx2 < review.rating ? "#FFD700" : "none"} 
+                          color={idx2 < review.rating ? "#FFD700" : "#cbd5e1"} 
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="review-comment-text">"{review.comment}"</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="feedback-form-container">
+          <div className={`flip-card ${submitted ? 'flipped' : ''}`}>
+            <div className="flip-card-inner">
+              {/* Front Face: The Form */}
+              <div 
+                className="flip-card-front feedback-form-card"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <h3>Share Your Experience</h3>
+                <p>Your feedback helps us improve our investment services and tools.</p>
+                <form onSubmit={handleSubmit} className="f-form">
+                  {error && <div className="f-error-alert">{error}</div>}
+                  
+                  <div className="f-group">
+                    <label>Overall Rating</label>
+                    <div className="star-rating-selector">
+                      {Array(5).fill(0).map((_, idx) => {
+                        const starVal = idx + 1;
+                        const isSelected = (hoverRating || form.rating) >= starVal;
+                        return (
+                          <button
+                            type="button"
+                            key={idx}
+                            className={`star-selector-btn ${isSelected ? 'active' : ''}`}
+                            onClick={() => {
+                              setForm(prev => ({ ...prev, rating: starVal }));
+                              setLastClickedStar(starVal);
+                              setTimeout(() => setLastClickedStar(null), 600);
+                            }}
+                            onMouseEnter={() => setHoverRating(starVal)}
+                            onMouseLeave={() => setHoverRating(0)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, position: 'relative' }}
+                          >
+                            <motion.div
+                              whileTap={{ scale: 1.5, rotate: [0, -15, 15, 0] }}
+                              whileHover={{ scale: 1.25, y: -2 }}
+                              transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                            >
+                              <Star 
+                                size={28} 
+                                fill={isSelected ? "#FFD700" : "none"} 
+                                color={isSelected ? "#FFD700" : "#cbd5e1"} 
+                                className="star-icon-transition"
+                              />
+                            </motion.div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="f-group">
+                    <label htmlFor="f-name">Full Name *</label>
+                    <input 
+                      type="text" 
+                      id="f-name" 
+                      required 
+                      placeholder="e.g. Rahul Sharma" 
+                      value={form.name} 
+                      onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="f-group">
+                    <label htmlFor="f-email">Email Address *</label>
+                    <input 
+                      type="email" 
+                      id="f-email" 
+                      required 
+                      placeholder="e.g. rahul@example.com" 
+                      value={form.email} 
+                      onChange={e => setForm(prev => ({ ...prev, email: e.target.value }))}
+                    />
+                  </div>
+
+                  <div className="f-group">
+                    <label htmlFor="f-comment">Your Comments *</label>
+                    <textarea 
+                      id="f-comment" 
+                      required 
+                      rows="4" 
+                      placeholder="Tell us about your trading experience, our platform, or customer service..." 
+                      value={form.comment} 
+                      onChange={e => setForm(prev => ({ ...prev, comment: e.target.value }))}
+                    ></textarea>
+                  </div>
+
+                  <button type="submit" className="btn-primary-lg submit-feedback-btn" style={{ border: 'none', cursor: 'pointer' }} disabled={loading}>
+                    {loading ? "Submitting..." : "Submit Review"}
+                  </button>
+                </form>
+              </div>
+
+              {/* Back Face: Cinematic Success */}
+              <div className="flip-card-back feedback-success-card">
+                <div className="success-content">
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={submitted ? { scale: 1, rotate: 0 } : { scale: 0, rotate: -180 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.3 }}
+                    className="success-icon-wrapper"
+                  >
+                    <div className="success-glow-ring" />
+                    <CheckCircle size={72} className="success-checkmark-icon" />
+                  </motion.div>
+                  
+                  <motion.h3
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={submitted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    Thank You!
+                  </motion.h3>
+                  
+                  <motion.p
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={submitted ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                    transition={{ delay: 0.6 }}
+                    className="success-message-text"
+                  >
+                    Your review has been successfully submitted.
+                  </motion.p>
+                  
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={submitted ? { opacity: 1 } : { opacity: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="success-note"
+                  >
+                    (Submissions are reviewed by admin prior to publication)
+                  </motion.p>
+
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={submitted ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.8 }}
+                    transition={{ delay: 0.8 }}
+                    type="button"
+                    onClick={() => {
+                      setSubmitted(false);
+                      setMessage(null);
+                    }}
+                    className="btn-primary-lg reset-feedback-btn"
+                  >
+                    Submit Another Review
+                  </motion.button>
+                </div>
+                
+                {/* Floating cinematic 3D particles */}
+                <div className="success-particles">
+                  {[...Array(12)].map((_, i) => {
+                    const colors = ['#10B981', '#FFD700', '#60A5FA', '#F472B6', '#34D399', '#FCD34D'];
+                    const sizes = [6, 8, 10, 5, 7, 9, 6, 8, 5, 10, 7, 6];
+                    const color = colors[i % colors.length];
+                    const size = sizes[i];
+                    return (
+                      <motion.div
+                        key={i}
+                        className="success-particle"
+                        animate={{
+                          y: [0, -(80 + Math.random() * 120)],
+                          x: [0, (i % 3 === 0 ? 40 : i % 3 === 1 ? -40 : 20) * (Math.random() + 0.5)],
+                          opacity: [0, 0.9, 0],
+                          scale: [0.3, 1.2, 0.3]
+                        }}
+                        transition={{
+                          duration: 2.5 + (i % 3) * 0.8,
+                          repeat: Infinity,
+                          delay: (i * 0.3) % 2.5,
+                          ease: 'easeOut'
+                        }}
+                        style={{
+                          left: `${8 + i * 7}%`,
+                          bottom: `${15 + (i % 4) * 10}%`,
+                          background: color,
+                          color: color,
+                          width: `${size}px`,
+                          height: `${size}px`,
+                          borderRadius: i % 4 === 0 ? '2px' : '50%',
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   9c. REGULATORY / LEGAL FOOTER PAGES
+   ═══════════════════════════════════════════════ */
+function PrivacyPolicy({ onBackClick }) {
+  return (
+    <section className="legal-doc-section">
+      <div className="container">
+        <button onClick={onBackClick} className="btn-back-home" style={{ border: 'none', cursor: 'pointer' }}>
+          ← Back to Home
+        </button>
+        <div className="legal-doc-card">
+          <span className="legal-badge">SCSL Compliance</span>
+          <h1>Privacy Policy</h1>
+          <p className="legal-updated">Last Updated: June 10, 2026</p>
+          
+          <div className="legal-intro-box">
+            <p><strong>Steel City Securities Limited (SCSL)</strong> respects your privacy and is committed to protecting your personal, financial, and KYC data. This Privacy Policy details how we collect, use, store, and safeguard your information when you open demat accounts, register for stock trading services, or use our digital portals.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>1. Information We Collect</h2>
+            <p>In accordance with SEBI, Prevention of Money Laundering Act (PMLA), and UIDAI guidelines, we collect the following categories of information to facilitate secure trading and depository services:</p>
+            <ul>
+              <li><strong>Personal Identity details:</strong> Full Name, Date of Birth, Gender, Father's Name, and photographs.</li>
+              <li><strong>KYC Verification IDs:</strong> PAN Card details, Aadhaar Card details (securely routed via UIDAI validation), and Address proofs.</li>
+              <li><strong>Financial details:</strong> Bank account numbers, IFSC codes, income range, net worth declarations, and tax residency declarations.</li>
+              <li><strong>Contact information:</strong> Email addresses, mobile numbers (validated via OTP systems), and mailing addresses.</li>
+              <li><strong>Digital Identifiers:</strong> IP addresses, browser specifications, OS types, and device cookies logged during platform authentication.</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>2. Purpose of Collection</h2>
+            <p>Your data is processed strictly for regulatory, transactional, and service-delivery purposes:</p>
+            <ul>
+              <li>KYC validation and Demat/Trading account opening registration with depositories (NSDL/CDSL).</li>
+              <li>Executing equity delivery, intraday, mutual funds, and derivative transactions on exchanges (NSE, BSE, MCX).</li>
+              <li>Sending transaction confirmation SMS, contract notes, and verification OTPs.</li>
+              <li>Assessing investment profiles for regulatory compliance under capital protection rules.</li>
+              <li>Preventing unauthorized activities, digital fraud, and ensuring security audits.</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>3. Information Sharing and Disclosure</h2>
+            <p>SCSL does not sell or lease user data to third-party marketing companies. Data is shared only with certified institutions and intermediaries as required by Indian financial regulations:</p>
+            <ul>
+              <li><strong>Regulatory Bodies:</strong> SEBI, stock exchanges (NSE, BSE, MCX), and depositories (NSDL, CDSL).</li>
+              <li><strong>Government Systems:</strong> Tax authorities, Central KYC Registry (CKYCR), and e-Governance systems.</li>
+              <li><strong>Trusted Intermediaries:</strong> Transaction SMS gateways, secure email processors (e.g. Brevo), and payment processors. All intermediaries are legally bound to hold data under absolute confidentiality.</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>4. Data Security</h2>
+            <p>We deploy bank-grade digital security: 256-bit SSL encryption, secure data server isolation, access control policies, audit logging, and regular vulnerability scanning. All database entries are securely stored in protected environments under the jurisdiction of the Republic of India.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>5. Contact Compliance Desk</h2>
+            <p>For any queries relating to data privacy, demat account security, or grievances, please reach out to our Chief Compliance Officer at <strong>compliance@steelcitynettrade.com</strong>.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Disclaimer({ onBackClick }) {
+  return (
+    <section className="legal-doc-section">
+      <div className="container">
+        <button onClick={onBackClick} className="btn-back-home" style={{ border: 'none', cursor: 'pointer' }}>
+          ← Back to Home
+        </button>
+        <div className="legal-doc-card">
+          <span className="legal-badge caution">Trading Notice</span>
+          <h1>Regulatory Disclaimer</h1>
+          <p className="legal-updated">Last Updated: June 10, 2026</p>
+          
+          <div className="legal-warning-box">
+            <p><strong>⚠️ SEBI MANDATORY RISK DISCLOSURE FOR DERIVATIVES (F&O):</strong><br />
+            9 out of 10 individual traders in Equity Derivatives (F&O) segment incurred net losses. On average, loss-makers registered net trading losses close to ₹50,000. Over and above the net trading losses incurred, loss-makers expended an additional 15% of net trading losses as transaction costs. Those making net profits, on average, showed transaction costs equal to 15% to 50% of their net profits. Trading in derivatives involves substantial market risk and is not suitable for all investors.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>1. General Investment Disclaimer</h2>
+            <p>All content, webinars, training materials, charts, and market data displayed on this portal are provided solely for educational and informational purposes. No materials should be construed as direct personal investment advice, buy/sell recommendations, or a guarantee of asset performance.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>2. Market Risk Disclosure</h2>
+            <p>Investments in the securities market are subject to market risks. Read all the related documents carefully before investing. Stock prices fluctuate based on macroeconomic trends, corporate earnings, interest rate shifts, and global events. Past performance of any strategy, fund, or market index is not an assurance of future returns.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>3. Platform Performance</h2>
+            <p>While Steel City Securities Limited (SCSL) strives to maintain continuous uptime, lightning-fast order execution, and real-time data feeds through our trading terminals, execution can occasionally be affected by network outages, telecom failures, or system latency. SCSL shall not be held liable for any loss resulting from technical failures beyond our control.</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>4. No Guaranteed Returns</h2>
+            <p>SCSL and its certified market professionals do not guarantee or promise any fixed or recurring returns on demat accounts, trading capital, or mutual fund SIPs. Any representative calculations, projections, or historical returns shown in webinars are illustrative and subject to varying market conditions.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function InvestorCharter({ onBackClick }) {
+  return (
+    <section className="legal-doc-section">
+      <div className="container">
+        <button onClick={onBackClick} className="btn-back-home" style={{ border: 'none', cursor: 'pointer' }}>
+          ← Back to Home
+        </button>
+        <div className="legal-doc-card">
+          <span className="legal-badge success">SEBI Mandated</span>
+          <h1>Investor Charter</h1>
+          <p className="legal-updated">SEBI Circular: SEBI/HO/MIRSD/DOP/P/CIR/2021/676</p>
+          
+          <div className="legal-intro-box">
+            <p>This charter is published by <strong>Steel City Securities Limited (Stock Broker & Depository Intermediary)</strong> to inform retail investors of their rights, responsibilities, and the grievance redressal channel mandated by the Securities and Exchange Board of India (SEBI).</p>
+          </div>
+
+          <div className="legal-section">
+            <h2>1. Rights of Investors</h2>
+            <p>Every retail trading and demat account holder has the right to:</p>
+            <ul>
+              <li><strong>Fair Treatment:</strong> Professional, transparent, and non-discriminatory treatment from our support staff.</li>
+              <li><strong>Secure Demat:</strong> Complete control and dematerialization of shares under NSDL/CDSL with real-time SMS notifications for all debits.</li>
+              <li><strong>Best Execution:</strong> Trades executed at the best available market prices on the exchanges.</li>
+              <li><strong>Prompt Payout:</strong> Payout of funds and delivery of securities within 24 hours of settlement timelines.</li>
+              <li><strong>Clear Statements:</strong> Receive digital contract notes, ledger statements, and transaction histories daily/monthly.</li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>2. Responsibilities of Investors</h2>
+            <p>To ensure capital protection and secure trading, investors are obligated to:</p>
+            <ul>
+              <li>Provide accurate, updated KYC details (PAN, Aadhaar, Bank Details, and Active Mobile/Email).</li>
+              <li>Sign client agreements and read all risk disclosure documents thoroughly.</li>
+              <li>Ensure demat transactions are authorized only using secure OTPs and e-DIS systems.</li>
+              <li>Verify ledger balances regularly and report discrepancies within 30 days.</li>
+              <li><strong>Never share login credentials, transaction passwords, or trade OTPs with sub-brokers, employees, or third-party advisors.</strong></li>
+            </ul>
+          </div>
+
+          <div className="legal-section">
+            <h2>3. SEBI Mandated Dos and Don'ts</h2>
+            <table className="charter-table">
+              <thead>
+                <tr>
+                  <th className="charter-do">✔️ Dos for Investors</th>
+                  <th className="charter-dont">❌ Don'ts for Investors</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Always deal with SEBI-registered brokers (check SCSL registration numbers).</td>
+                  <td>Never sign blank Delivery Instruction Slips (DIS) or authorization letters.</td>
+                </tr>
+                <tr>
+                  <td>Pay money only via banking channels directly to SCSL's designated client bank accounts.</td>
+                  <td>Never make cash transactions with sub-brokers, relationship managers, or agents.</td>
+                </tr>
+                <tr>
+                  <td>Register your active mobile number and email ID to receive direct alerts from SEBI/Exchanges.</td>
+                  <td>Never accept guaranteed/assured returns on trading accounts or stock suggestions.</td>
+                </tr>
+                <tr>
+                  <td>Authorize demat debits only via secure CDSL/NSDL verification portals.</td>
+                  <td>Never leave your demat account unmonitored for long durations; freeze it if inactive.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="legal-section">
+            <h2>4. Grievance Redressal Mechanism</h2>
+            <p>If you encounter issues, please follow this escalation path for prompt resolution:</p>
+            <ol>
+              <li><strong>Escalation Level 1 (Internal):</strong> Submit a ticket to our Grievance Redressal Officer at <strong>grievance@steelcitynettrade.com</strong>. We resolve 95% of queries within 3 working days.</li>
+              <li><strong>Escalation Level 2 (SEBI SCORES):</strong> If unresolved within 30 days, register your grievance on SEBI's web-based SCORES portal (scores.gov.in) or call the SEBI helpline: 1800-266-7575.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    10. CONTACT PAGE
    ═══════════════════════════════════════════════ */
 function Contact() {
@@ -1481,7 +1991,7 @@ function LeadsAdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
-  const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [] });
+  const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [], feedbacks: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
@@ -1556,14 +2066,26 @@ function LeadsAdminPage() {
   const handleLogout = () => {
     sessionStorage.removeItem('scsl_admin_auth');
     setIsAuthenticated(false);
-    setLeads({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [] });
+    setLeads({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [], feedbacks: [] });
     setUsernameInput('');
     setPasswordInput('');
     setLoginError('');
   };
 
+  const handleToggleFeedback = async (id, currentApproval) => {
+    const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/feedback/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeaderVal || '' },
+        body: JSON.stringify({ id, is_approved: !currentApproval })
+      });
+      if (res.ok) fetchLeads();
+    } catch (err) { console.error(err); }
+  };
+
   const handleDelete = async (type, id) => {
-    const typeLabel = type === 'contact' ? 'lead' : type === 'registration' ? 'webinar registration' : 'account opening request';
+    const typeLabel = type === 'contact' ? 'lead' : type === 'registration' ? 'webinar registration' : type === 'feedback' ? 'feedback entry' : 'account opening request';
     if (!window.confirm(`Are you sure you want to delete this ${typeLabel}?`)) return;
     const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
     try {
@@ -1613,6 +2135,12 @@ function LeadsAdminPage() {
     (a.pan && a.pan.toLowerCase().includes(search.toLowerCase())) ||
     (a.aadhaar && a.aadhaar.includes(search)) ||
     (a.state && a.state.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const filteredFeedbacks = (leads.feedbacks || []).filter(f =>
+    f.name.toLowerCase().includes(search.toLowerCase()) ||
+    f.email.toLowerCase().includes(search.toLowerCase()) ||
+    (f.comment && f.comment.toLowerCase().includes(search.toLowerCase()))
   );
 
   if (!isAuthenticated) {
@@ -1766,6 +2294,9 @@ function LeadsAdminPage() {
             <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
               Site Analytics
             </button>
+            <button className={`admin-tab ${activeTab === 'feedbacks' ? 'active' : ''}`} onClick={() => setActiveTab('feedbacks')}>
+              Reviews ({filteredFeedbacks.length})
+            </button>
           </div>
           <div className="admin-search-wrap">
             <input 
@@ -1895,6 +2426,53 @@ function LeadsAdminPage() {
           </div>
         ) : activeTab === 'webinars' ? (
           <WebinarManageTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} allRegistrations={leads.registrations} />
+        ) : activeTab === 'feedbacks' ? (
+          <div className="admin-table-container">
+            {filteredFeedbacks.length === 0 ? (
+              <div className="admin-empty">No feedback submissions yet.</div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Rating</th>
+                    <th>Comment</th>
+                    <th>Submitted At</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFeedbacks.map(f => (
+                    <tr key={f.id}>
+                      <td>#{f.id}</td>
+                      <td className="bold">{f.name}</td>
+                      <td><a href={`mailto:${f.email}`}>{f.email}</a></td>
+                      <td style={{ color: '#FFD700', fontWeight: 700 }}>{'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}</td>
+                      <td className="message-cell">{f.comment}</td>
+                      <td>{new Date(f.timestamp).toLocaleString()}</td>
+                      <td>
+                        <span style={{ padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, background: f.is_approved ? 'rgba(5,150,105,0.12)' : 'rgba(239,68,68,0.12)', color: f.is_approved ? '#059669' : '#dc2626' }}>
+                          {f.is_approved ? 'Published' : 'Hidden'}
+                        </span>
+                      </td>
+                      <td style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => handleToggleFeedback(f.id, f.is_approved)}
+                          style={{ background: f.is_approved ? 'rgba(239,68,68,0.1)' : 'rgba(5,150,105,0.1)', color: f.is_approved ? '#dc2626' : '#059669', padding: '6px 12px', borderRadius: '50px', fontWeight: 700, fontSize: '0.78rem', border: '1px solid transparent', cursor: 'pointer' }}
+                        >
+                          {f.is_approved ? 'Hide' : 'Publish'}
+                        </button>
+                        <button className="delete-btn" onClick={() => handleDelete('feedback', f.id)}>Delete</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         ) : null}
 
         {activeTab === 'analytics' && (
@@ -2294,9 +2872,9 @@ function Footer() {
         <p>© 2026 Steel City Securities Limited. All rights reserved.</p>
         <div className="footer-bottom-links">
           <a href="#leads" className="admin-db-link">Admin Dashboard</a>
-          <a href="#">Privacy Policy</a>
-          <a href="#">Disclaimer</a>
-          <a href="#">Investor Charter</a>
+          <a href="#privacy">Privacy Policy</a>
+          <a href="#disclaimer">Disclaimer</a>
+          <a href="#investor-charter">Investor Charter</a>
         </div>
       </div>
     </footer>
@@ -2331,7 +2909,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash)) {
+      if (['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
         setPage(hash);
         window.scrollTo(0, 0);
       } else if (hash === '') {
@@ -2375,6 +2953,7 @@ export default function App() {
             <WhyWebinars />
             <Services limit={3} />
             <Testimonials />
+            <FeedbackSection />
           </>
         )}
         {page === 'webinars' && <WebinarSchedule onRegisterClick={setRegisteringWebinar} />}
@@ -2384,6 +2963,9 @@ export default function App() {
         {page === 'about' && <About />}
         {page === 'contact' && <Contact />}
         {page === 'leads' && <LeadsAdminPage />}
+        {page === 'privacy' && <PrivacyPolicy onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
+        {page === 'disclaimer' && <Disclaimer onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
+        {page === 'investor-charter' && <InvestorCharter onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
       </main>
       <Footer />
       <FloatingCTA />

@@ -14,7 +14,7 @@ import urllib.error
 import json
 import secrets
 from sqlalchemy.orm import Session
-from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar
+from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback
 from user_agents import parse
 
 app = FastAPI(title="SCSL Portal API", version="1.0.0")
@@ -72,6 +72,16 @@ class AccountOpeningReq(BaseModel):
     aadhaar: str
     dob: str
     state: str
+
+class FeedbackReq(BaseModel):
+    name: str
+    email: str
+    rating: int
+    comment: str
+
+class ToggleFeedbackReq(BaseModel):
+    id: int
+    is_approved: bool
 
 # ─── OTP Store (in-memory, email -> {otp, timestamp}) ────
 otp_store = {}
@@ -618,6 +628,48 @@ async def open_account(req: AccountOpeningReq, db: Session = Depends(get_db)):
     db.commit()
     return {"success": True, "message": "Your account opening request has been submitted successfully!"}
 
+@app.post("/api/feedback")
+async def create_feedback(req: FeedbackReq, db: Session = Depends(get_db)):
+    if req.rating < 1 or req.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5.")
+    if not req.name.strip():
+        raise HTTPException(status_code=400, detail="Name cannot be empty.")
+    if not req.comment.strip():
+        raise HTTPException(status_code=400, detail="Comment cannot be empty.")
+    
+    feedback = Feedback(
+        name=req.name.strip(),
+        email=req.email.strip(),
+        rating=req.rating,
+        comment=req.comment.strip(),
+        is_approved=False
+    )
+    db.add(feedback)
+    db.commit()
+    db.refresh(feedback)
+    return {"success": True, "message": "Feedback submitted successfully!", "feedback": {
+        "id": feedback.id,
+        "name": feedback.name,
+        "rating": feedback.rating,
+        "comment": feedback.comment,
+        "timestamp": feedback.timestamp.isoformat()
+    }}
+
+
+@app.get("/api/feedback")
+async def get_feedbacks(db: Session = Depends(get_db)):
+    feedbacks = db.query(Feedback).filter(Feedback.is_approved == True).order_by(Feedback.timestamp.desc()).all()
+    return feedbacks
+
+@app.post("/api/feedback/approve")
+async def approve_feedback(req: ToggleFeedbackReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    item = db.query(Feedback).filter(Feedback.id == req.id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+    item.is_approved = req.is_approved
+    db.commit()
+    return {"success": True, "message": f"Feedback approval status updated to {req.is_approved}."}
+
 @app.get("/api/leads")
 async def get_leads(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
     contacts = db.query(Contact).order_by(Contact.timestamp.desc()).all()
@@ -625,13 +677,15 @@ async def get_leads(username: str = Depends(authenticate_admin), db: Session = D
     page_views = db.query(PageView).order_by(PageView.timestamp.desc()).all()
     logins = db.query(AdminLogin).order_by(AdminLogin.timestamp.desc()).all()
     account_openings = db.query(AccountOpening).order_by(AccountOpening.timestamp.desc()).all()
+    feedbacks = db.query(Feedback).order_by(Feedback.timestamp.desc()).all()
     
     return {
         "contacts": contacts,
         "registrations": registrations,
         "page_views": page_views,
         "logins": logins,
-        "account_openings": account_openings
+        "account_openings": account_openings,
+        "feedbacks": feedbacks
     }
 
 @app.delete("/api/leads/delete")
@@ -642,6 +696,8 @@ async def delete_lead(req: DeleteRequest, username: str = Depends(authenticate_a
         item = db.query(Registration).filter(Registration.id == req.id).first()
     elif req.type == "account":
         item = db.query(AccountOpening).filter(AccountOpening.id == req.id).first()
+    elif req.type == "feedback":
+        item = db.query(Feedback).filter(Feedback.id == req.id).first()
     else:
         item = None
         
