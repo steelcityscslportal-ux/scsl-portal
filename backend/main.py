@@ -656,11 +656,14 @@ async def health():
 
 @app.get("/api/diag")
 async def diag():
+    from database import DATABASE_URL
+    db_type = "postgresql" if "postgres" in DATABASE_URL or "postgresql" in DATABASE_URL else "sqlite"
     return {
         "has_brevo_key": bool(BREVO_API_KEY),
         "brevo_key_len": len(BREVO_API_KEY) if BREVO_API_KEY else 0,
         "sender_email": SMTP_EMAIL,
-        "last_otp_error": last_otp_error
+        "last_otp_error": last_otp_error,
+        "db_type": db_type
     }
 
 

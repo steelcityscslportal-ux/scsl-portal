@@ -11,7 +11,10 @@ import {
 } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:8000' 
+    : 'https://scsl-backend.onrender.com');
 
 /* ═══════════════════════════════════════════════
    1. MARKET WATCH TICKER
