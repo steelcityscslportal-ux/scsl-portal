@@ -2151,21 +2151,21 @@ ul { list-style: none; }
 .hero-slideshow-wrapper {
   position: relative;
   overflow: hidden;
-  min-height: 330px;
+  min-height: 340px;
   margin-bottom: 30px;
   background: rgba(255, 255, 255, 0.55);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1.5px solid rgba(135, 206, 235, 0.35);
   border-radius: var(--radius);
-  padding: 36px 36px 28px 36px;
+  padding: 32px 32px 24px 32px;
   box-shadow: var(--shadow-md);
 }
 
 .hero-slide {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1fr 1.35fr;
+  gap: 36px;
   align-items: center;
 }
 
@@ -2176,20 +2176,20 @@ ul { list-style: none; }
   background: rgba(0, 119, 182, 0.10);
   border: 1px solid rgba(0, 119, 182, 0.2);
   color: var(--blue);
-  padding: 8px 16px;
+  padding: 6px 14px;
   border-radius: 50px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 850;
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
 
 .slide-title {
-  font-size: 2.8rem;
+  font-size: 2.3rem;
   font-weight: 900;
   color: var(--navy);
-  line-height: 1.1;
-  margin: 16px 0 10px 0;
+  line-height: 1.15;
+  margin: 14px 0 8px 0;
   background: linear-gradient(135deg, var(--navy) 10%, var(--blue) 90%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -2197,18 +2197,18 @@ ul { list-style: none; }
 }
 
 .slide-subtitle {
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #0077b6;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   line-height: 1.35;
   letter-spacing: -0.2px;
 }
 
 .slide-desc {
-  font-size: 1.05rem;
+  font-size: 1.0rem;
   color: var(--muted);
-  line-height: 1.65;
+  line-height: 1.6;
   margin: 0;
 }
 
@@ -2218,10 +2218,11 @@ ul { list-style: none; }
   align-items: center;
   position: relative;
   overflow: hidden;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  aspect-ratio: 16/10;
+  border-radius: 14px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
+  aspect-ratio: 16/9;
+  width: 100%;
 }
 
 .slide-image-container img {
