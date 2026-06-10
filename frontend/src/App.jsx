@@ -153,6 +153,55 @@ function Navbar({ activePage, onOpenAccountClick }) {
   );
 }
 
+
+/* ═══════════════════════════════════════════════
+   3a. HERO ANIMATED STATS
+   ═══════════════════════════════════════════════ */
+function HeroCountUpStat({ target, suffix, label }) {
+  const [count, setCount] = React.useState(0);
+  const ref = React.useRef(null);
+  const started = React.useRef(false);
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !started.current) {
+        started.current = true;
+        let start = 0;
+        const duration = 2000;
+        const step = target / (duration / 16);
+        const timer = setInterval(() => {
+          start += step;
+          if (start >= target) { setCount(target); clearInterval(timer); }
+          else setCount(Math.floor(start));
+        }, 16);
+      }
+    });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [target]);
+  return (
+    <div className="hero-mini-stat" ref={ref}>
+      <span className="hero-mini-num">{count}{suffix}</span>
+      <span className="hero-mini-lbl">{label}</span>
+    </div>
+  );
+}
+
+function HeroCountUpStats() {
+  return (
+    <motion.div
+      className="hero-trust-row"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.6, delay: 0.7 }}
+    >
+      <HeroCountUpStat target={31} suffix="+" label="Years of Trust" />
+      <HeroCountUpStat target={400000} suffix="+" label="Investors Served" />
+      <HeroCountUpStat target={420} suffix="+" label="Pan India Locations" />
+      <HeroCountUpStat target={22} suffix="" label="States (e-Gov)" />
+    </motion.div>
+  );
+}
+
 /* ═══════════════════════════════════════════════
    3. HERO SECTION (HOME PAGE ONLY)
    ═══════════════════════════════════════════════ */
@@ -264,56 +313,72 @@ function Hero({ onOpenAccountClick }) {
             </div>
           </div>
 
-          <div className="hero-highlights">
-            {highlights.map((h, i) => {
-              const Icon = h.icon;
-              return (
-                <motion.div 
-                  key={i} 
-                  className="hero-highlight-card"
-                  initial={{ opacity: 0, x: -30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 * i }}
-                  whileHover={{ x: 6, transition: { duration: 0.2 } }}
-                >
-                  <div className="hero-hl-icon" style={{ background: `${h.color}15`, color: h.color }}>
-                    <Icon size={20} />
-                  </div>
-                  <div className="hero-hl-text">
-                    <h4>{h.title}</h4>
-                    <p>{h.desc}</p>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
+          {/* Training Program Info Panel */}
+          <motion.div
+            className="hero-training-panel"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className="htp-header">
+              <span className="htp-tag"><TrendingUp size={14} /> Stock Market Training Program</span>
+              <h2 className="htp-headline">Master the Markets. <span className="htp-accent">Trade with Confidence.</span></h2>
+              <p className="htp-lead">Are you interested in the Stock Market but don't know where to start? Join our comprehensive online training program and learn from experienced market professionals.</p>
+            </div>
+
+            <div className="htp-modules-grid">
+              {[
+                { icon: BarChart3, color: "#0077b6", label: "Stock Market Basics", items: ["NSE & BSE Overview", "Demat & Trading Accounts", "Types of Orders (Market, Limit, SL)"] },
+                { icon: TrendingUp, color: "#059669", label: "Trading Strategies", items: ["Intraday & Swing Trading", "Positional & Delivery Trading", "Understanding Market Trends"] },
+                { icon: Activity, color: "#d97706", label: "Technical Analysis", items: ["Candlestick Patterns", "RSI, MACD & Moving Averages", "Support, Resistance & Volume"] },
+                { icon: ShieldCheck, color: "#7c3aed", label: "Risk Management", items: ["Capital Protection Strategies", "Stop Loss & Position Sizing", "Risk-Reward Ratio"] },
+                { icon: PiggyBank, color: "#0891b2", label: "Wealth Creation", items: ["Long-Term Investing & SIP", "NPS & Retirement Planning", "Portfolio Diversification"] },
+                { icon: Star, color: "#dc2626", label: "Program Benefits", items: ["Live Online Sessions & Q&A", "Real Chart Analysis", "Trading Psychology Guidance"] },
+              ].map((mod, i) => {
+                const Icon = mod.icon;
+                return (
+                  <motion.div
+                    key={i}
+                    className="htp-module-card"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: 0.05 * i }}
+                    whileHover={{ y: -3, transition: { duration: 0.2 } }}
+                  >
+                    <div className="htp-mod-icon" style={{ background: `${mod.color}12`, color: mod.color }}>
+                      <Icon size={16} />
+                    </div>
+                    <div className="htp-mod-content">
+                      <span className="htp-mod-label">{mod.label}</span>
+                      <ul className="htp-mod-items">
+                        {mod.items.map((item, j) => <li key={j}>✅ {item}</li>)}
+                      </ul>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+
+            <div className="htp-who">
+              <span className="htp-who-label">👥 Who Should Attend?</span>
+              <div className="htp-who-tags">
+                {["New Traders", "Working Professionals", "Students", "Business Owners", "Housewives", "Existing Investors"].map(t => (
+                  <span key={t} className="htp-who-tag">{t}</span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
 
           <div className="hero-actions">
             <button onClick={onOpenAccountClick} className="btn-primary-lg" style={{ border: 'none', cursor: 'pointer' }}>Open Trading Account <ChevronRight size={20} /></button>
-            <a href="#webinars" className="btn-secondary-lg">Upcoming Webinars</a>
+            <a href="#webinars" className="btn-secondary-lg">Register Free Now</a>
           </div>
           <div className="exchange-badges">
             {['NSE', 'BSE', 'MCX', 'NSDL', 'CDSL', 'NCDEX'].map(e => <span key={e} className="exch-badge">{e}</span>)}
           </div>
 
-          <motion.div
-            className="hero-trust-row"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-          >
-            {[
-              { num: "31+", lbl: "Years of Trust" },
-              { num: "4L+", lbl: "Investors Served" },
-              { num: "420+", lbl: "Pan India Locations" },
-              { num: "22", lbl: "States (e-Gov)" },
-            ].map((stat, i) => (
-              <div className="hero-mini-stat" key={i}>
-                <span className="hero-mini-num">{stat.num}</span>
-                <span className="hero-mini-lbl">{stat.lbl}</span>
-              </div>
-            ))}
-          </motion.div>
+          {/* Animated count-up stats */}
+          <HeroCountUpStats />
         </motion.div>
         <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
           <div className="ceo-float-card">
