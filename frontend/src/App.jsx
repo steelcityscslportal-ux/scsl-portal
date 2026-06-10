@@ -157,12 +157,35 @@ function Navbar({ activePage, onOpenAccountClick }) {
    3. HERO SECTION (HOME PAGE ONLY)
    ═══════════════════════════════════════════════ */
 function Hero({ onOpenAccountClick }) {
-  const words = ["Stock Trading", "Smart Investing", "e-Gov Services", "Wealth Building"];
-  const [index, setIndex] = useState(0);
+  const slides = [
+    {
+      badge: "🎓 Absolutely Free Online Training",
+      title: "FREE STOCK MARKET TRAINING PROGRAM",
+      subtitle: "Exclusively For New Investors, Beginners & Aspiring Traders",
+      desc: "Learn the fundamentals of stock market investing, trading, technical analysis, risk management, and wealth creation from experienced market professionals.",
+      image: "/slide1.png"
+    },
+    {
+      badge: "💻 Interactive Live Webinars",
+      title: "FREE LIVE INVESTOR AWARENESS MEETINGS",
+      subtitle: "Secure Your Seat For Real-Time Strategy Sessions",
+      desc: "Join live online sessions, interactive meetings, and live platform walkthroughs. Get all your doubts resolved in real-time.",
+      image: "/slide2.png"
+    },
+    {
+      badge: "🏆 Expert Research Advisors",
+      title: "LEARN FROM SKILLED MARKET MENTORS",
+      subtitle: "Direct Guidance from SEBI Registered Research Analysts",
+      desc: "Get trained by seasoned advisors who guide you step-by-step through technical indicators, trading charts, and disciplined investing habits.",
+      image: "/slide3.png"
+    }
+  ];
+
+  const [slideIndex, setSlideIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex(prev => (prev + 1) % words.length);
+      setSlideIndex(prev => (prev + 1) % slides.length);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
@@ -194,25 +217,52 @@ function Hero({ onOpenAccountClick }) {
       <div className="blob blob-2" />
       <div className="container hero-grid">
         <motion.div className="hero-text" initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-          <div className="hero-badge"><span className="badge-dot" />Established 1995 · ISO 9001:2015 Certified</div>
-          <h1 className="hero-title">
-            Your Gateway to<br />
-            <span className="hero-title-rotate-container">
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={index}
-                  className="gradient-text"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -20, opacity: 0 }}
-                  transition={{ duration: 0.4 }}
-                  style={{ position: 'absolute', left: 0, top: 0, width: '100%', whiteSpace: 'nowrap' }}
-                >
-                  {words[index]}
-                </motion.span>
-              </AnimatePresence>
-            </span>
-          </h1>
+          <div className="hero-slideshow-wrapper">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={slideIndex}
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }}
+                transition={{ duration: 0.4 }}
+                className="hero-slide"
+              >
+                <div className="slide-content">
+                  <div className="slide-badge"><span className="badge-dot" />{slides[slideIndex].badge}</div>
+                  <h2 className="slide-title">
+                    {slides[slideIndex].title}
+                  </h2>
+                  <p className="slide-subtitle">
+                    {slides[slideIndex].subtitle}
+                  </p>
+                  <p className="slide-desc">
+                    {slides[slideIndex].desc}
+                  </p>
+                </div>
+                <div className="slide-image-container">
+                  <img
+                    src={slides[slideIndex].image}
+                    alt={slides[slideIndex].title}
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
+            
+            <div className="slide-dots">
+              {slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSlideIndex(i)}
+                  className="slide-dot"
+                  style={{
+                    width: slideIndex === i ? '20px' : '6px',
+                    background: slideIndex === i ? 'var(--blue)' : '#cbd5e1'
+                  }}
+                  aria-label={`Go to slide ${i + 1}`}
+                />
+              ))}
+            </div>
+          </div>
 
           <div className="hero-highlights">
             {highlights.map((h, i) => {
