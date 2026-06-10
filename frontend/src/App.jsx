@@ -155,13 +155,14 @@ function Navbar({ activePage, onOpenAccountClick }) {
 
 
 /* ═══════════════════════════════════════════════
-   3a. HERO ANIMATED STATS
+   3a. TRUST STATS BAR (FULL-WIDTH BLUE SECTION)
    ═══════════════════════════════════════════════ */
-function HeroCountUpStat({ target, suffix, label }) {
-  const [count, setCount] = React.useState(0);
-  const ref = React.useRef(null);
-  const started = React.useRef(false);
-  React.useEffect(() => {
+function TrustStatsItem({ target, suffix, label, icon: Icon }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting && !started.current) {
         started.current = true;
@@ -170,37 +171,47 @@ function HeroCountUpStat({ target, suffix, label }) {
         const step = target / (duration / 16);
         const timer = setInterval(() => {
           start += step;
-          if (start >= target) { setCount(target); clearInterval(timer); }
-          else setCount(Math.floor(start));
+          if (start >= target) {
+            setCount(target);
+            clearInterval(timer);
+          } else {
+            setCount(Math.floor(start));
+          }
         }, 16);
       }
     });
     if (ref.current) observer.observe(ref.current);
     return () => observer.disconnect();
   }, [target]);
+
+  const displayCount = target >= 10000 ? count.toLocaleString('en-IN') : count;
+
   return (
-    <div className="hero-mini-stat" ref={ref}>
-      <span className="hero-mini-num">{count}{suffix}</span>
-      <span className="hero-mini-lbl">{label}</span>
+    <div className="trust-stat-card" ref={ref}>
+      <div className="trust-stat-icon-wrap">
+        <Icon size={26} />
+      </div>
+      <div className="trust-stat-content">
+        <span className="trust-stat-num">{displayCount}{suffix}</span>
+        <span className="trust-stat-lbl">{label}</span>
+      </div>
     </div>
   );
 }
 
-function HeroCountUpStats() {
+function TrustStatsBar() {
   return (
-    <motion.div
-      className="hero-trust-row"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.6, delay: 0.7 }}
-    >
-      <HeroCountUpStat target={31} suffix="+" label="Years of Trust" />
-      <HeroCountUpStat target={400000} suffix="+" label="Investors Served" />
-      <HeroCountUpStat target={420} suffix="+" label="Pan India Locations" />
-      <HeroCountUpStat target={22} suffix="" label="States (e-Gov)" />
-    </motion.div>
+    <section className="trust-stats-section">
+      <div className="container trust-stats-grid">
+        <TrustStatsItem target={31} suffix="+" label="Years of Trust" icon={Award} />
+        <TrustStatsItem target={400000} suffix="+" label="Investors Served" icon={Users} />
+        <TrustStatsItem target={420} suffix="+" label="Pan India Locations" icon={MapPin} />
+        <TrustStatsItem target={22} suffix="" label="States (e-Gov)" icon={Globe} />
+      </div>
+    </section>
   );
 }
+
 
 /* ═══════════════════════════════════════════════
    3. HERO SECTION (HOME PAGE ONLY)
@@ -377,8 +388,7 @@ function Hero({ onOpenAccountClick }) {
             {['NSE', 'BSE', 'MCX', 'NSDL', 'CDSL', 'NCDEX'].map(e => <span key={e} className="exch-badge">{e}</span>)}
           </div>
 
-          {/* Animated count-up stats */}
-          <HeroCountUpStats />
+
         </motion.div>
         <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
           <div className="ceo-float-card">
@@ -2354,6 +2364,7 @@ export default function App() {
         {page === 'home' && (
           <>
             <Hero onOpenAccountClick={() => setShowOpenAccount(true)} />
+            <TrustStatsBar />
             <WhyWebinars />
             <Services limit={3} />
             <Testimonials />
