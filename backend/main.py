@@ -14,7 +14,7 @@ import urllib.error
 import json
 import secrets
 from sqlalchemy.orm import Session
-from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening
+from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar
 from user_agents import parse
 
 app = FastAPI(title="SCSL Portal API", version="1.0.0")
@@ -151,6 +151,37 @@ def send_otp_email_brevo(to_email: str, otp_code: str, html_content: str):
         last_otp_error = msg
         return False
 
+def send_registration_confirmation_email(to_email: str, to_name: str, topic: str, date: str, time_str: str, link: str):
+    """Send a webinar registration confirmation email via Brevo API."""
+    join_section = f"""
+        <div style="background: #e8f0fe; border-radius: 8px; padding: 16px; margin: 16px 0; text-align: center;">
+            <p style="margin: 0 0 8px; font-size: 14px; color: #333;">Join the session here:</p>
+            <a href="{link}" style="color: #0077B6; font-weight: bold; word-break: break-all;">{link}</a>
+        </div>""" if link else ""
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px;">
+        <div style="max-width: 520px; margin: 0 auto; background: #f8f9fa; border-radius: 12px; padding: 30px; border: 1px solid #e0e0e0;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #0a1628; margin: 0;">Steel City Securities</h2>
+                <p style="color: #666; font-size: 14px;">Webinar Registration Confirmed ✅</p>
+            </div>
+            <p style="color: #333;">Dear <strong>{to_name}</strong>,</p>
+            <p style="color: #555;">You have successfully registered for the following webinar:</p>
+            <div style="background: white; border-radius: 8px; padding: 20px; margin: 16px 0; border-left: 4px solid #0077B6;">
+                <p style="margin: 4px 0;"><strong>Topic:</strong> {topic}</p>
+                <p style="margin: 4px 0;"><strong>Date:</strong> {date}</p>
+                <p style="margin: 4px 0;"><strong>Time:</strong> {time_str}</p>
+            </div>
+            {join_section}
+            <p style="color: #888; font-size: 12px; text-align: center;">If you did not register, please ignore this email.</p>
+        </div>
+    </body>
+    </html>
+    """
+    return send_otp_email_brevo(to_email, "", html)
+
 def send_otp_email(to_email: str, otp_code: str):
     """Send OTP to user's email via Brevo API or fallback to SMTP"""
     html = f"""
@@ -198,6 +229,135 @@ def send_otp_email(to_email: str, otp_code: str):
         print(f"[OTP SERVICE] Failed to send email: {e}")
         return False
 
+def send_registration_confirmation_email(to_email: str, to_name: str, topic: str, date: str, time_str: str, link: str):
+    """Send a beautiful registration confirmation email with meeting link and timing"""
+    html = f"""
+    <html>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333;">
+        <div style="max-width: 550px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+            <div style="background: #0a1628; padding: 30px; text-align: center; border-bottom: 4px solid #0077B6;">
+                <img src="https://www.steelcitynettrade.com/images/Steelcity-logo.png" alt="Steel City Logo" style="height: 40px; margin-bottom: 12px;" />
+                <h2 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.5px;">Registration Confirmed!</h2>
+            </div>
+            <div style="padding: 30px;">
+                <p style="font-size: 16px; margin: 0 0 16px 0; color: #0a1628;">Dear <strong>{to_name}</strong>,</p>
+                <p style="font-size: 14px; line-height: 1.6; margin: 0 0 24px 0; color: #555;">
+                    Thank you for registering! Your seat has been reserved for our live investor awareness session. Below are your meeting details:
+                </p>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 24px;">
+                    <h4 style="color: #0a1628; margin: 0 0 12px 0; font-size: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">{topic}</h4>
+                    <p style="margin: 6px 0; font-size: 13px; color: #555;">📅 <strong>Date:</strong> {date}</p>
+                    <p style="margin: 6px 0; font-size: 13px; color: #555;">⏰ <strong>Time:</strong> {time_str}</p>
+                    <p style="margin: 6px 0; font-size: 13px; color: #555;">💻 <strong>Mode:</strong> Online</p>
+                </div>
+                
+                {f'''
+                <div style="text-align: center; margin: 30px 0 20px 0;">
+                    <a href="{link}" target="_blank" style="background: #0077B6; color: #ffffff; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; box-shadow: 0 4px 6px rgba(0,119,182,0.25);">
+                        Join Live Meeting
+                    </a>
+                    <p style="margin: 12px 0 0 0; font-size: 12px; color: #666; word-break: break-all;">
+                        Or copy-paste this URL: <br/>
+                        <a href="{link}" style="color: #0077B6;">{link}</a>
+                    </p>
+                </div>
+                ''' if link else '''
+                <div style="background: #fff9db; border-radius: 8px; padding: 12px; border: 1px solid #ffe3e3; margin: 20px 0; font-size: 13px; color: #b07a00; text-align: center;">
+                    ⚠️ The meeting link will be sent to you prior to the session start.
+                </div>
+                '''}
+                
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                
+                <p style="font-size: 12px; line-height: 1.5; color: #888; margin: 0; text-align: center;">
+                    If you have questions, contact us at <a href="mailto:scsl@steelcitynettrade.com" style="color: #0077B6; text-decoration: none;">scsl@steelcitynettrade.com</a>.
+                </p>
+            </div>
+            <div style="background: #f8fafc; padding: 15px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0;">
+                © 2026 Steel City Securities Limited. All rights reserved.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    if BREVO_API_KEY:
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json",
+            "accept": "application/json"
+        }
+        payload = {
+            "sender": {"name": "Steel City Securities", "email": SMTP_EMAIL},
+            "to": [{"email": to_email}],
+            "subject": f"Webinar Registration Confirmed: {topic}",
+            "htmlContent": html
+        }
+        try:
+            req = urllib.request.Request(
+                url, 
+                data=json.dumps(payload).encode("utf-8"), 
+                headers=headers, 
+                method="POST"
+            )
+            with urllib.request.urlopen(req) as response:
+                res_body = response.read().decode("utf-8")
+                print(f"[REGISTRATION SERVICE] Email sent successfully to {to_email} via Brevo API: {res_body}")
+                return True
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8")
+            print(f"[REGISTRATION SERVICE] Failed to send email via Brevo API: HTTP {e.code}: {error_body}")
+            return False
+        except Exception as e:
+            print(f"[REGISTRATION SERVICE] Failed to send email via Brevo API: {e}")
+            return False
+            
+    if not SMTP_PASSWORD:
+        print(f"[REGISTRATION SERVICE] SMTP not configured. Confirmation for {to_email} to topic '{topic}' not sent.")
+        return True
+        
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"Webinar Registration Confirmed: {topic}"
+        msg["From"] = f"Steel City Securities <{SMTP_EMAIL}>"
+        msg["To"] = to_email
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_EMAIL, SMTP_PASSWORD)
+            server.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+        
+        print(f"[REGISTRATION SERVICE] Email sent successfully to {to_email}")
+        return True
+    except Exception as e:
+        print(f"[REGISTRATION SERVICE] Failed to send email: {e}")
+        return False
+
+# ─── Default Webinar Seed Data ──────────────────────
+DEFAULT_WEBINARS = [
+    {"trainer": "Avadhut Sathe",   "region": "Pan India",    "date": "30 May",  "day": "Thursday", "time": "English | 6:00 PM – 9:00 PM",             "topic": "Secrets of Smart Investing",         "mode": "Online", "seats": 250, "link": "", "avatar_url": "/host2.png"},
+    {"trainer": "Rajesh Kutty",    "region": "Middle East",  "date": "30 May",  "day": "Thursday", "time": "English | 10:30 AM UAE Time (Gulf Time)",  "topic": "F&O Masterclass",                      "mode": "Online", "seats": 200, "link": "", "avatar_url": "/host2.png"},
+    {"trainer": "Avadhut Sathe",   "region": "Pan India",    "date": "31 May",  "day": "Friday",   "time": "Hindi | 6:00 PM – 9:00 PM",               "topic": "Understanding Commodity Markets",     "mode": "Online", "seats": 300, "link": "", "avatar_url": "/host2.png"},
+    {"trainer": "Vigneshwar DL",   "region": "Pan India",    "date": "31 May",  "day": "Friday",   "time": "Tamil | 6:00 PM – 9:00 PM",               "topic": "Sub-Broker Success Blueprint",        "mode": "Online", "seats": 150, "link": "", "avatar_url": "/host2.png"},
+]
+
+def seed_webinars():
+    """Populate the webinars table with defaults if it is empty."""
+    db = SessionLocal()
+    try:
+        if db.query(Webinar).count() == 0:
+            for w in DEFAULT_WEBINARS:
+                db.add(Webinar(**w))
+            db.commit()
+            print("[SEED] Seeded default webinars.")
+    finally:
+        db.close()
+
+seed_webinars()
+
 # ─── Base market data with realistic simulation ───
 BASE_DATA = {
     "NIFTY 50":   {"price": 22450.75, "lot": 50},
@@ -226,6 +386,77 @@ def simulate_price(base: float) -> dict:
 @app.get("/")
 async def root():
     return {"message": "Steel City Securities Limited Portal API", "status": "online"}
+
+# ─── Webinar Public Endpoints ─────────────────────────
+@app.get("/api/webinars")
+async def get_webinars(db: Session = Depends(get_db)):
+    webinars = db.query(Webinar).order_by(Webinar.id.asc()).all()
+    result = []
+    for w in webinars:
+        reg_count = db.query(Registration).filter(Registration.webinar_id == w.id).count()
+        result.append({
+            "id": w.id,
+            "trainer": w.trainer,
+            "region": w.region,
+            "date": w.date,
+            "day": w.day,
+            "time": w.time,
+            "topic": w.topic,
+            "mode": w.mode,
+            "seats": w.seats,
+            "link": w.link,
+            "avatar_url": w.avatar_url,
+            "registration_count": reg_count,
+        })
+    return result
+
+class WebinarSaveReq(BaseModel):
+    id: Optional[int] = None
+    trainer: str
+    region: str
+    date: str
+    day: str
+    time: str
+    topic: str
+    mode: str = "Online"
+    seats: int = 200
+    link: str = ""
+    avatar_url: str = "/host2.png"
+
+@app.post("/api/webinars/save")
+async def save_webinar(req: WebinarSaveReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    if req.id:
+        w = db.query(Webinar).filter(Webinar.id == req.id).first()
+        if not w:
+            raise HTTPException(status_code=404, detail="Webinar not found")
+        w.trainer    = req.trainer
+        w.region     = req.region
+        w.date       = req.date
+        w.day        = req.day
+        w.time       = req.time
+        w.topic      = req.topic
+        w.mode       = req.mode
+        w.seats      = req.seats
+        w.link       = req.link
+        w.avatar_url = req.avatar_url
+    else:
+        w = Webinar(
+            trainer=req.trainer, region=req.region, date=req.date,
+            day=req.day, time=req.time, topic=req.topic, mode=req.mode,
+            seats=req.seats, link=req.link, avatar_url=req.avatar_url
+        )
+        db.add(w)
+    db.commit()
+    db.refresh(w)
+    return {"success": True, "id": w.id}
+
+@app.delete("/api/webinars/{webinar_id}")
+async def delete_webinar(webinar_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    w = db.query(Webinar).filter(Webinar.id == webinar_id).first()
+    if w:
+        db.delete(w)
+        db.commit()
+    return {"success": True}
 
 @app.get("/api/market-watch")
 async def market_watch():
@@ -327,6 +558,23 @@ async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_d
     )
     db.add(registration)
     db.commit()
+
+    # Send confirmation email (best-effort — don't fail registration if email fails)
+    try:
+        webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
+        join_link = webinar.link if webinar and webinar.link else ""
+        time_str  = webinar.time if webinar else reg.date
+        send_registration_confirmation_email(
+            to_email=reg.email,
+            to_name=reg.name,
+            topic=reg.topic,
+            date=reg.date,
+            time_str=time_str,
+            link=join_link
+        )
+    except Exception as e:
+        print(f"[CONFIRM EMAIL] Failed to send confirmation to {reg.email}: {e}")
+
     return {"success": True, "message": f"Successfully registered for: {reg.topic}!"}
 
 @app.post("/api/open-account")

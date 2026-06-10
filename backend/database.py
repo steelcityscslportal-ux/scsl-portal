@@ -67,5 +67,20 @@ class AccountOpening(Base):
     state = Column(String)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
+class Webinar(Base):
+    __tablename__ = "webinars"
+    id = Column(Integer, primary_key=True, index=True)
+    trainer = Column(String)
+    region = Column(String)
+    date = Column(String)
+    day = Column(String)
+    time = Column(String)
+    topic = Column(String)
+    mode = Column(String, default="Online")
+    seats = Column(Integer, default=200)
+    link = Column(String, default="")
+    avatar_url = Column(String, default="/host2.png")
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
 Base.metadata.create_all(bind=engine)
 

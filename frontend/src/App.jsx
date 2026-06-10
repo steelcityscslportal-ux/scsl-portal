@@ -187,19 +187,32 @@ function Hero({ onOpenAccountClick }) {
 /* ═══════════════════════════════════════════════
    4. WEBINAR SCHEDULE PAGE
    ═══════════════════════════════════════════════ */
-const upcomingWebinars = [
-  { id: 1, trainer: 'Avadhut Sathe', region: 'Pan India', date: '30 May', day: 'Thursday', time: 'English | 6:00 PM to 9:00 PM', topic: 'Secrets of Smart Investing', mode: 'Online', seats: 250 },
-  { id: 2, trainer: 'Rajesh Kutty', region: 'Middle East', date: '30 May', day: 'Thursday', time: 'English | 10:30 AM UAE Time (Gulf Time)', topic: 'F&O Masterclass', mode: 'Online', seats: 200 },
-  { id: 3, trainer: 'Avadhut Sathe', region: 'Pan India', date: '31 May', day: 'Friday', time: 'Hindi | 6:00 PM to 9:00 PM', topic: 'Understanding Commodity Markets', mode: 'Online', seats: 300 },
-  { id: 4, trainer: 'Vigneshwar DL', region: 'Pan India', date: '31 May', day: 'Friday', time: 'Tamil | 6:00 PM to 9:00 PM', topic: 'Sub-Broker Success Blueprint', mode: 'Online', seats: 150 },
-];
-
 function WebinarSchedule({ onRegisterClick }) {
+  const [webinars, setWebinars] = useState([]);
+  const [loadingWebinars, setLoadingWebinars] = useState(true);
+
+  useEffect(() => {
+    const fetchWebinars = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/webinars`);
+        if (res.ok) {
+          const data = await res.json();
+          setWebinars(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch webinars:', err);
+      } finally {
+        setLoadingWebinars(false);
+      }
+    };
+    fetchWebinars();
+  }, []);
+
   return (
     <section className="webinar-section section">
       <div className="container">
         <div className="section-header">
-          <span className="section-tag">Free Seminars & Webinars</span>
+          <span className="section-tag">Free Seminars &amp; Webinars</span>
           <h2 className="section-title">Upcoming Investor Awareness Sessions</h2>
         </div>
 
@@ -211,10 +224,14 @@ function WebinarSchedule({ onRegisterClick }) {
             <div className="wtm-cell wtm-time">Language/Time</div>
             <div className="wtm-cell wtm-action"></div>
           </div>
-          {upcomingWebinars.map((w, i) => (
+          {loadingWebinars ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>Loading webinars...</div>
+          ) : webinars.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>No upcoming webinars scheduled.</div>
+          ) : webinars.map((w, i) => (
             <motion.div key={w.id} className="wtm-row" initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
               <div className="wtm-cell wtm-trainer">
-                <img src="/host2.png" alt={w.trainer} className="trainer-avatar" />
+                <img src={w.avatar_url || '/host2.png'} alt={w.trainer} className="trainer-avatar" />
                 <div className="trainer-info">
                   <span className="t-name">{w.trainer}</span>
                   <span className="t-region">{w.region}</span>
@@ -230,8 +247,6 @@ function WebinarSchedule({ onRegisterClick }) {
               </div>
             </motion.div>
           ))}
-
-
         </div>
       </div>
     </section>
@@ -529,6 +544,267 @@ function Contact() {
 }
 
 /* ═══════════════════════════════════════════════
+   11a. WEBINAR MANAGE TAB (Admin Sub-Component)
+   ═══════════════════════════════════════════════ */
+const BLANK_WEBINAR = { id: null, trainer: '', region: '', date: '', day: '', time: '', topic: '', mode: 'Online', seats: 200, link: '', avatar_url: '/host2.png' };
+
+function WebinarManageTab({ authHeader, allRegistrations }) {
+  const [webinars, setWebinars] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState(BLANK_WEBINAR);
+  const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+
+  const fetchWebinars = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/webinars`);
+      if (res.ok) setWebinars(await res.json());
+    } catch (err) {
+      console.error('Failed to fetch webinars:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchWebinars(); }, []);
+
+  const openCreate = () => { setFormData(BLANK_WEBINAR); setShowForm(true); };
+  const openEdit   = (w)  => { setFormData({ ...w }); setShowForm(true); };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/webinars/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        setShowForm(false);
+        fetchWebinars();
+      } else if (res.status === 401) {
+        alert('Session expired. Please log out and log in again.');
+      } else {
+        alert('Failed to save webinar.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error saving webinar.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this webinar?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/webinars/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) fetchWebinars();
+      else alert('Failed to delete webinar.');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '10px 14px', borderRadius: '8px',
+    border: '1px solid #CBD5E1', fontSize: '0.9rem', outline: 'none',
+    background: 'white', boxSizing: 'border-box'
+  };
+  const labelStyle = { fontWeight: 600, fontSize: '0.85rem', color: 'var(--navy)', display: 'block', marginBottom: '5px' };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h3 style={{ color: 'var(--navy)', margin: 0 }}>Manage Webinars</h3>
+        <button
+          className="btn-solid"
+          onClick={openCreate}
+          style={{ border: 'none', cursor: 'pointer', padding: '10px 20px', fontSize: '0.9rem' }}
+        >
+          + Create Webinar
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="admin-loader">Loading webinars...</div>
+      ) : webinars.length === 0 ? (
+        <div className="admin-empty">No webinars found. Create one above.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {webinars.map(w => {
+            const regs = allRegistrations.filter(r => r.webinar_id === w.id);
+            const isExpanded = expandedId === w.id;
+            return (
+              <div key={w.id} style={{ background: 'var(--white)', border: '1px solid var(--light)', borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow)' }}>
+                <div style={{ padding: '20px', display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                  <img
+                    src={w.avatar_url || '/host2.png'}
+                    alt={w.trainer}
+                    style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--sky)', flexShrink: 0 }}
+                    onError={e => { e.target.src = '/host2.png'; }}
+                  />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--navy)', margin: '0 0 4px' }}>{w.topic}</p>
+                        <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: '0 0 2px' }}>
+                          <strong>{w.trainer}</strong> · {w.region}
+                        </p>
+                        <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: 0 }}>
+                          {w.date} ({w.day}) · {w.time}
+                        </p>
+                        {w.link && (
+                          <a href={w.link} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: '0.8rem', wordBreak: 'break-all' }}>
+                            🔗 {w.link}
+                          </a>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                        <span style={{ background: '#e8f0fe', color: 'var(--blue)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>
+                          {regs.length} / {w.seats} registered
+                        </span>
+                        <button
+                          onClick={() => openEdit(w)}
+                          style={{ background: 'var(--sky)', color: 'var(--navy)', border: 'none', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                        >Edit</button>
+                        <button
+                          onClick={() => handleDelete(w.id)}
+                          style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
+                        >Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ borderTop: '1px solid var(--light)' }}>
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : w.id)}
+                    style={{ width: '100%', background: 'none', border: 'none', padding: '12px 20px', cursor: 'pointer', textAlign: 'left', color: 'var(--blue)', fontWeight: 600, fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    {isExpanded ? '▲' : '▶'} View Registered Users ({regs.length})
+                  </button>
+                  {isExpanded && (
+                    <div style={{ padding: '0 20px 16px' }}>
+                      {regs.length === 0 ? (
+                        <div className="admin-empty" style={{ margin: 0 }}>No registrations for this webinar yet.</div>
+                      ) : (
+                        <table className="admin-table">
+                          <thead>
+                            <tr>
+                              <th>#</th>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Phone</th>
+                              <th>Registered At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {regs.map((r, idx) => (
+                              <tr key={r.id}>
+                                <td>{idx + 1}</td>
+                                <td className="bold">{r.name}</td>
+                                <td><a href={`mailto:${r.email}`}>{r.email}</a></td>
+                                <td>{r.phone || '-'}</td>
+                                <td>{new Date(r.timestamp).toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create / Edit Modal */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+            onClick={e => { if (e.target === e.currentTarget) setShowForm(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              style={{ background: 'white', borderRadius: '20px', padding: '32px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h3 style={{ color: 'var(--navy)', margin: 0 }}>{formData.id ? 'Edit Webinar' : 'Create Webinar'}</h3>
+                <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: 'var(--muted)' }}>×</button>
+              </div>
+              <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={labelStyle}>Topic *</label>
+                    <input style={inputStyle} required value={formData.topic} onChange={e => setFormData({...formData, topic: e.target.value})} placeholder="e.g. Smart Investing Secrets" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Trainer Name *</label>
+                    <input style={inputStyle} required value={formData.trainer} onChange={e => setFormData({...formData, trainer: e.target.value})} placeholder="e.g. Avadhut Sathe" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Region *</label>
+                    <input style={inputStyle} required value={formData.region} onChange={e => setFormData({...formData, region: e.target.value})} placeholder="e.g. Pan India" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Date *</label>
+                    <input style={inputStyle} required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} placeholder="e.g. 30 May" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Day</label>
+                    <input style={inputStyle} value={formData.day} onChange={e => setFormData({...formData, day: e.target.value})} placeholder="e.g. Thursday" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Time / Language *</label>
+                    <input style={inputStyle} required value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} placeholder="e.g. English | 6:00 PM – 9:00 PM" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Mode</label>
+                    <select style={inputStyle} value={formData.mode} onChange={e => setFormData({...formData, mode: e.target.value})}>
+                      <option value="Online">Online</option>
+                      <option value="Offline">Offline</option>
+                      <option value="Hybrid">Hybrid</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Seats</label>
+                    <input style={inputStyle} type="number" min="1" value={formData.seats} onChange={e => setFormData({...formData, seats: parseInt(e.target.value)||200})} />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Join Link (Zoom / Teams / Meet URL)</label>
+                  <input style={inputStyle} value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} placeholder="https://zoom.us/j/..." />
+                </div>
+                <div>
+                  <label style={labelStyle}>Trainer Avatar URL</label>
+                  <input style={inputStyle} value={formData.avatar_url} onChange={e => setFormData({...formData, avatar_url: e.target.value})} placeholder="/host2.png" />
+                </div>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+                  <button type="button" onClick={() => setShowForm(false)} style={{ padding: '12px 24px', borderRadius: '10px', border: '1.5px solid var(--light)', background: 'white', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                  <button type="submit" className="btn-solid" disabled={saving} style={{ border: 'none', cursor: 'pointer', padding: '12px 24px' }}>
+                    {saving ? 'Saving...' : formData.id ? 'Save Changes' : 'Create Webinar'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage() {
@@ -817,6 +1093,9 @@ function LeadsAdminPage() {
             <button className={`admin-tab ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')}>
               Account Openings ({filteredAccounts.length})
             </button>
+            <button className={`admin-tab ${activeTab === 'webinars' ? 'active' : ''}`} onClick={() => setActiveTab('webinars')}>
+              Manage Webinars
+            </button>
             <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
               Site Analytics
             </button>
@@ -947,6 +1226,8 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
+        ) : activeTab === 'webinars' ? (
+          <WebinarManageTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} allRegistrations={leads.registrations} />
         ) : null}
 
         {activeTab === 'analytics' && (
