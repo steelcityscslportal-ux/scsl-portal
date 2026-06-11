@@ -17,6 +17,22 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
     : 'https://scsl-backend.onrender.com');
 
 /* ═══════════════════════════════════════════════
+   KEEP-ALIVE: Pings backend every 14 minutes to
+   prevent Render free tier from sleeping
+   ═══════════════════════════════════════════════ */
+function useKeepAlive() {
+  useEffect(() => {
+    // Ping immediately on load to wake backend early
+    fetch(`${API_BASE_URL}/api/health`).catch(() => {});
+    // Then ping every 14 minutes (Render sleeps after 15 min)
+    const id = setInterval(() => {
+      fetch(`${API_BASE_URL}/api/health`).catch(() => {});
+    }, 14 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+}
+
+/* ═══════════════════════════════════════════════
    1. MARKET WATCH TICKER
    Updates every few seconds with realistic pricing
    ═══════════════════════════════════════════════ */
@@ -454,7 +470,23 @@ function WebinarSchedule({ onRegisterClick }) {
             <div className="wtm-cell wtm-action"></div>
           </div>
           {loadingWebinars ? (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>Loading webinars...</div>
+            <div className="webinar-skeleton-list">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="wtm-row wtm-skeleton-row">
+                  <div className="wtm-cell wtm-trainer">
+                    <div className="skel skel-avatar" />
+                    <div style={{ flex: 1 }}>
+                      <div className="skel skel-line" style={{ width: '70%' }} />
+                      <div className="skel skel-line" style={{ width: '45%', marginTop: 6 }} />
+                    </div>
+                  </div>
+                  <div className="wtm-cell"><div className="skel skel-badge" /></div>
+                  <div className="wtm-cell"><div className="skel skel-line" style={{ width: '60%' }} /></div>
+                  <div className="wtm-cell"><div className="skel skel-line" style={{ width: '80%' }} /></div>
+                  <div className="wtm-cell"><div className="skel skel-btn" /></div>
+                </div>
+              ))}
+            </div>
           ) : webinars.length === 0 ? (
             <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>No upcoming webinars scheduled.</div>
           ) : webinars.map((w, i) => (
@@ -2899,6 +2931,7 @@ function FloatingCTA() {
    APP ROOT
    ═══════════════════════════════════════════════ */
 export default function App() {
+  useKeepAlive();
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '');
     return ['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash) ? hash : 'home';
