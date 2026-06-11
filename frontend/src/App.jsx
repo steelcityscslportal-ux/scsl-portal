@@ -1703,15 +1703,53 @@ function Contact() {
 /* ═══════════════════════════════════════════════
    11a. WEBINAR MANAGE TAB (Admin Sub-Component)
    ═══════════════════════════════════════════════ */
-const BLANK_WEBINAR = { id: null, trainer: '', region: '', date: '', day: '', time: '', topic: '', mode: 'Online', seats: 200, link: '', avatar_url: '/host2.png', is_paid: false, fee_amount: 0, payment_utr_required: true };
+const BLANK_WEBINAR = { id: null, trainer: '', region: '', date: '', day: '', time: '', topic: '', mode: 'Online', seats: 200, link: '', avatar_url: '/host2.png', is_paid: false, fee_amount: 0, payment_utr_required: true, start_time: '' };
 
-function WebinarManageTab({ authHeader, allRegistrations }) {
+function WebinarManageTab({ authHeader, allRegistrations, onRefresh }) {
   const [webinars, setWebinars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(BLANK_WEBINAR);
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+
+  const formatStartTime = (isoStr) => {
+    if (!isoStr) return '';
+    const parseStr = (isoStr.includes('+') || isoStr.includes('Z')) ? isoStr : isoStr + '+05:30';
+    try {
+      return new Date(parseStr).toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return isoStr;
+    }
+  };
+
+  const handleApprovePayment = async (regId) => {
+    if (!window.confirm('Approve payment for this registration? This will mark it as paid and automatically send the meeting confirmation email containing the join link.')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/registrations/approve-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({ registration_id: regId })
+      });
+      if (res.ok) {
+        alert('Payment approved successfully! Confirmation email queued.');
+        if (onRefresh) onRefresh();
+      } else {
+        const errData = await res.json();
+        alert('Failed to approve payment: ' + (errData.detail || 'Server error'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error approving payment.');
+    }
+  };
 
   const fetchWebinars = async () => {
     try {
@@ -1814,9 +1852,14 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                         <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: '0 0 2px' }}>
                           <strong>{w.trainer}</strong> · {w.region}
                         </p>
-                        <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: 0 }}>
+                        <p style={{ color: 'var(--muted)', fontSize: '0.875rem', margin: '0 0 2px' }}>
                           {w.date} ({w.day}) · {w.time}
                         </p>
+                        {w.start_time && (
+                          <p style={{ color: '#0f766e', fontSize: '0.82rem', fontWeight: 600, margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            ⏰ Starts: {formatStartTime(w.start_time)} (IST)
+                          </p>
+                        )}
                         {w.link && (
                           <a href={w.link} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: '0.8rem', wordBreak: 'break-all' }}>
                             🔗 {w.link}
@@ -1877,9 +1920,20 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                                 <td>{r.phone || '-'}</td>
                                 {w.is_paid && (
                                   <td>
-                                    <span style={{ background: r.payment_status === 'paid' ? '#dcfce7' : '#fee2e2', color: r.payment_status === 'paid' ? '#16a34a' : '#dc2626', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600 }}>
-                                      {r.payment_status === 'paid' ? `✓ ₹${r.fee_paid || w.fee_amount}` : 'Pending'}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ background: r.payment_status === 'paid' ? '#dcfce7' : '#fee2e2', color: r.payment_status === 'paid' ? '#16a34a' : '#dc2626', padding: '3px 10px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 600, display: 'inline-block' }}>
+                                        {r.payment_status === 'paid' ? `✓ ₹${r.fee_paid || w.fee_amount}` : 'Pending'}
+                                      </span>
+                                      {r.payment_status === 'pending' && (
+                                        <button
+                                          onClick={() => handleApprovePayment(r.id)}
+                                          style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                                          title="Verify payment and send confirmation email"
+                                        >
+                                          ✓ Approve
+                                        </button>
+                                      )}
+                                    </div>
                                   </td>
                                 )}
                                 {w.is_paid && <td style={{ fontSize: '0.8rem', color: '#555' }}>{r.payment_utr || '—'}</td>}
@@ -1951,6 +2005,16 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
                   <div>
                     <label style={labelStyle}>Seats</label>
                     <input style={inputStyle} type="number" min="1" value={formData.seats} onChange={e => setFormData({...formData, seats: parseInt(e.target.value)||200})} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Exact Start Time (for email reminders) *</label>
+                    <input 
+                      style={inputStyle} 
+                      type="datetime-local" 
+                      required 
+                      value={formData.start_time ? formData.start_time.slice(0, 16) : ''} 
+                      onChange={e => setFormData({...formData, start_time: e.target.value})} 
+                    />
                   </div>
                 </div>
                 <div>
@@ -2889,7 +2953,7 @@ function LeadsAdminPage() {
             )}
           </div>
         ) : activeTab === 'webinars' ? (
-          <WebinarManageTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} allRegistrations={leads.registrations} />
+          <WebinarManageTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} allRegistrations={leads.registrations} onRefresh={fetchLeads} />
         ) : activeTab === 'feedbacks' ? (
           <div className="admin-table-container">
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>

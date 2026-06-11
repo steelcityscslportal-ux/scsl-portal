@@ -489,6 +489,7 @@ async def get_webinars(db: Session = Depends(get_db)):
             "is_paid": w.is_paid or False,
             "fee_amount": w.fee_amount or 0.0,
             "payment_utr_required": w.payment_utr_required if w.payment_utr_required is not None else True,
+            "start_time": w.start_time.isoformat() if w.start_time else None
         })
     return result
 
@@ -507,9 +508,17 @@ class WebinarSaveReq(BaseModel):
     is_paid: bool = False
     fee_amount: float = 0.0
     payment_utr_required: bool = True
+    start_time: Optional[datetime.datetime] = None
 
 @app.post("/api/webinars/save")
 async def save_webinar(req: WebinarSaveReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    naive_start_time = None
+    if req.start_time:
+        if req.start_time.tzinfo:
+            naive_start_time = req.start_time.astimezone(datetime.timezone.utc).replace(tzinfo=None)
+        else:
+            naive_start_time = req.start_time
+
     if req.id:
         w = db.query(Webinar).filter(Webinar.id == req.id).first()
         if not w:
@@ -527,13 +536,15 @@ async def save_webinar(req: WebinarSaveReq, username: str = Depends(authenticate
         w.is_paid              = req.is_paid
         w.fee_amount           = req.fee_amount
         w.payment_utr_required = req.payment_utr_required
+        w.start_time           = naive_start_time
     else:
         w = Webinar(
             trainer=req.trainer, region=req.region, date=req.date,
             day=req.day, time=req.time, topic=req.topic, mode=req.mode,
             seats=req.seats, link=req.link, avatar_url=req.avatar_url,
             is_paid=req.is_paid, fee_amount=req.fee_amount,
-            payment_utr_required=req.payment_utr_required
+            payment_utr_required=req.payment_utr_required,
+            start_time=naive_start_time
         )
         db.add(w)
     db.commit()
@@ -621,7 +632,7 @@ async def request_otp(req: OTPRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
 
 @app.post("/api/register")
-async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_db)):
+async def register_webinar(reg: WebinarRegistration, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     email = reg.email.strip().lower()
     
     # Check if OTP exists for this email
@@ -648,10 +659,11 @@ async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_d
     # Determine payment status
     pay_status = "free"
     fee_paid   = 0.0
+    is_paid_webinar = webinar.is_paid if webinar else False
     if webinar and webinar.is_paid:
         if webinar.payment_utr_required and not (reg.payment_utr or "").strip():
             raise HTTPException(status_code=400, detail="Payment UTR/reference is required for this webinar. Please complete payment and enter your UTR.")
-        pay_status = "paid"
+        pay_status = "pending"  # Under review initially
         fee_paid   = webinar.fee_amount or 0.0
     
     registration = Registration(
@@ -664,23 +676,27 @@ async def register_webinar(reg: WebinarRegistration, db: Session = Depends(get_d
     db.add(registration)
     db.commit()
 
-    # Send confirmation email (best-effort — don't fail registration if email fails)
-    try:
-        join_link = webinar.link if webinar and webinar.link else ""
-        time_str  = webinar.time if webinar else reg.date
-        send_registration_confirmation_email(
-            to_email=reg.email,
-            to_name=reg.name,
-            topic=reg.topic,
-            date=reg.date,
-            time_str=time_str,
-            link=join_link,
-            db=db
-        )
-    except Exception as e:
-        print(f"[CONFIRM EMAIL] Failed to send confirmation to {reg.email}: {e}")
+    # Send confirmation email in background (non-blocking) ONLY for free webinars.
+    # Paid webinars will trigger this email when approved by admin.
+    if not is_paid_webinar:
+        try:
+            join_link = webinar.link if webinar and webinar.link else ""
+            time_str  = webinar.time if webinar else reg.date
+            background_tasks.add_task(
+                send_registration_confirmation_email,
+                reg.email,
+                reg.name,
+                reg.topic,
+                reg.date,
+                time_str,
+                join_link,
+                db
+            )
+        except Exception as e:
+            print(f"[CONFIRM EMAIL] Failed to queue confirmation email to {reg.email}: {e}")
 
-    return {"success": True, "message": f"Successfully registered for: {reg.topic}!"}
+    msg_suffix = " Please wait for admin verification of your payment." if is_paid_webinar else ""
+    return {"success": True, "message": f"Successfully registered for: {reg.topic}!{msg_suffix}"}
 
 @app.post("/api/open-account")
 async def open_account(req: AccountOpeningReq, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -748,10 +764,33 @@ async def approve_feedback(req: ToggleFeedbackReq, username: str = Depends(authe
 async def get_leads(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
     contacts = db.query(Contact).order_by(Contact.timestamp.desc()).all()
     registrations = db.query(Registration).order_by(Registration.timestamp.desc()).all()
-    page_views = db.query(PageView).order_by(PageView.timestamp.desc()).all()
-    logins = db.query(AdminLogin).order_by(AdminLogin.timestamp.desc()).all()
+    page_views = db.query(PageView).order_by(PageView.timestamp.desc()).limit(100).all()
+    logins = db.query(AdminLogin).order_by(AdminLogin.timestamp.desc()).limit(100).all()
     account_openings = db.query(AccountOpening).order_by(AccountOpening.timestamp.desc()).all()
     feedbacks = db.query(Feedback).order_by(Feedback.timestamp.desc()).all()
+    
+    webinars = db.query(Webinar).order_by(Webinar.id.asc()).all()
+    webinar_list = []
+    for w in webinars:
+        reg_count = db.query(Registration).filter(Registration.webinar_id == w.id).count()
+        webinar_list.append({
+            "id": w.id,
+            "trainer": w.trainer,
+            "region": w.region,
+            "date": w.date,
+            "day": w.day,
+            "time": w.time,
+            "topic": w.topic,
+            "mode": w.mode,
+            "seats": w.seats,
+            "link": w.link,
+            "avatar_url": w.avatar_url,
+            "registration_count": reg_count,
+            "is_paid": w.is_paid or False,
+            "fee_amount": w.fee_amount or 0.0,
+            "payment_utr_required": w.payment_utr_required if w.payment_utr_required is not None else True,
+            "start_time": w.start_time.isoformat() if w.start_time else None
+        })
     
     return {
         "contacts": contacts,
@@ -759,7 +798,8 @@ async def get_leads(username: str = Depends(authenticate_admin), db: Session = D
         "page_views": page_views,
         "logins": logins,
         "account_openings": account_openings,
-        "feedbacks": feedbacks
+        "feedbacks": feedbacks,
+        "webinars": webinar_list
     }
 
 @app.delete("/api/leads/delete")
@@ -854,17 +894,54 @@ async def delete_admin_user(user_id: int, current_user: AdminUser = Depends(requ
     db.commit()
     return {"success": True}
 
+# ─── Webinar Payment Approval Route ───────────────
+class ApprovePaymentReq(BaseModel):
+    registration_id: int
+
+@app.post("/api/admin/registrations/approve-payment")
+async def approve_payment(req: ApprovePaymentReq, background_tasks: BackgroundTasks, current_user: AdminUser = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    reg = db.query(Registration).filter(Registration.id == req.registration_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration record not found.")
+    
+    if reg.payment_status == "paid":
+        return {"success": True, "message": "Payment already approved."}
+        
+    reg.payment_status = "paid"
+    db.commit()
+    
+    # Send confirmation email containing join details
+    webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
+    try:
+        join_link = webinar.link if webinar and webinar.link else ""
+        time_str  = webinar.time if webinar else reg.date
+        background_tasks.add_task(
+            send_registration_confirmation_email,
+            reg.email,
+            reg.name,
+            reg.topic,
+            reg.date,
+            time_str,
+            join_link,
+            db
+        )
+    except Exception as e:
+        print(f"[APPROVE PAYMENT EMAIL] Failed to queue confirmation email to {reg.email}: {e}")
+        
+    return {"success": True, "message": f"Payment approved and confirmation email queued for {reg.email}."}
+
 # ─── System Settings Routes ─────────────────────────
 class SettingUpdateReq(BaseModel):
     key: str
     value: str
 
 SETTING_KEYS = [
-    {"key": "brevo_api_key",   "label": "Brevo API Key",       "type": "password", "hint": "From Brevo dashboard → API Keys"},
-    {"key": "smtp_email",      "label": "SMTP / Sender Email",  "type": "text",     "hint": "Gmail or Brevo sender email"},
-    {"key": "smtp_password",   "label": "SMTP App Password",   "type": "password", "hint": "Gmail app password (16 chars)"},
-    {"key": "smtp_host",       "label": "SMTP Host",            "type": "text",     "hint": "smtp.gmail.com or smtp-relay.brevo.com"},
-    {"key": "smtp_port",       "label": "SMTP Port",            "type": "text",     "hint": "587 (TLS) or 465 (SSL)"},
+    {"key": "brevo_api_key",         "label": "Brevo API Key",                 "type": "password", "hint": "From Brevo dashboard → API Keys"},
+    {"key": "smtp_email",            "label": "SMTP / Sender Email",            "type": "text",     "hint": "Gmail or Brevo sender email"},
+    {"key": "smtp_password",         "label": "SMTP App Password",             "type": "password", "hint": "Gmail app password (16 chars)"},
+    {"key": "smtp_host",             "label": "SMTP Host",                      "type": "text",     "hint": "smtp.gmail.com or smtp-relay.brevo.com"},
+    {"key": "smtp_port",             "label": "SMTP Port",                      "type": "text",     "hint": "587 (TLS) or 465 (SSL)"},
+    {"key": "reminder_lead_minutes", "label": "Reminder Lead Time (Minutes)",  "type": "text",     "hint": "Minutes before webinar starts to send email reminder. Default: 60"},
 ]
 
 @app.get("/api/admin/settings")
@@ -927,11 +1004,11 @@ async def export_feedbacks(current_user: AdminUser = Depends(authenticate_admin)
     rows = [[f.id, f.name, f.email, f.rating, f.comment, 'Yes' if f.is_approved else 'No', f.timestamp.strftime('%Y-%m-%d %H:%M:%S')] for f in feedbacks]
     return make_csv_response("feedbacks.csv", ["ID","Name","Email","Rating","Comment","Published","Submitted At"], rows)
 
-# ─── Webinar 1-Hour Reminder Daemon ────────────────
+# ─── Webinar Reminder Daemon ────────────────
 reminder_task_running = False
 
 async def webinar_reminder_daemon():
-    """Background async task: checks every 5 minutes for webinars starting in ~1 hour and sends reminder emails."""
+    """Background async task: checks every 5 minutes for webinars starting in configured lead time and sends reminder emails."""
     global reminder_task_running
     reminder_task_running = True
     print("[REMINDER DAEMON] Started webinar reminder daemon.")
@@ -940,19 +1017,34 @@ async def webinar_reminder_daemon():
             await asyncio.sleep(300)  # check every 5 minutes
             db = SessionLocal()
             try:
-                now = datetime.datetime.utcnow()
-                one_hour_later = now + datetime.timedelta(hours=1)
-                window_start   = one_hour_later - datetime.timedelta(minutes=5)
-                window_end     = one_hour_later + datetime.timedelta(minutes=5)
+                # Align with Indian Standard Time (IST - UTC+5:30)
+                now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
+                
+                # Fetch configurable lead minutes
+                lead_mins_setting = get_setting(db, "reminder_lead_minutes", "60")
+                try:
+                    lead_minutes = int(lead_mins_setting.strip())
+                except Exception:
+                    lead_minutes = 60
+                
+                target_time = now + datetime.timedelta(minutes=lead_minutes)
+                # Check within a 10-minute window (±10 minutes from target time) to catch webinars reliably
+                window_start = target_time - datetime.timedelta(minutes=10)
+                window_end   = target_time + datetime.timedelta(minutes=10)
+                
                 webinars = db.query(Webinar).filter(
                     Webinar.start_time >= window_start,
                     Webinar.start_time <= window_end
                 ).all()
+                
                 for webinar in webinars:
+                    # Only send reminders to registrations that are either free or approved paid (not pending)
                     registrations = db.query(Registration).filter(
                         Registration.webinar_id == webinar.id,
-                        Registration.reminder_sent == False
+                        Registration.reminder_sent == False,
+                        Registration.payment_status != "pending"
                     ).all()
+                    
                     for reg in registrations:
                         try:
                             send_webinar_reminder_email(
