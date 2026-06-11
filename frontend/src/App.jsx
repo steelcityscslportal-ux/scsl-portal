@@ -2024,6 +2024,7 @@ function AdminUsersTab({ authHeader }) {
   const [form, setForm] = useState({ username: '', password: '', role: 'supervisor' });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -2036,8 +2037,8 @@ function AdminUsersTab({ authHeader }) {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const openCreate = () => { setEditUser(null); setForm({ username: '', password: '', role: 'supervisor' }); setShowForm(true); setMsg(''); };
-  const openEdit = (u) => { setEditUser(u); setForm({ username: u.username, password: '', role: u.role }); setShowForm(true); setMsg(''); };
+  const openCreate = () => { setEditUser(null); setForm({ username: '', password: '', role: 'supervisor' }); setShowPassword(false); setShowForm(true); setMsg(''); };
+  const openEdit = (u) => { setEditUser(u); setForm({ username: u.username, password: '', role: u.role }); setShowPassword(false); setShowForm(true); setMsg(''); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2108,8 +2109,54 @@ function AdminUsersTab({ authHeader }) {
           <div style={{ background: 'white', borderRadius: '20px', padding: '36px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
             <h3 style={{ margin: '0 0 24px', color: '#0a1628' }}>{editUser ? 'Edit Staff Account' : 'Create Staff Account'}</h3>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div><label style={labelStyle}>Username</label><input style={inputStyle} required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Enter username" /></div>
-              <div><label style={labelStyle}>{editUser ? 'New Password (leave blank to keep)' : 'Password'}</label><input style={inputStyle} type="password" required={!editUser} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={editUser ? 'Leave blank to keep current' : 'Enter password'} /></div>
+              <div>
+                <label style={labelStyle}>Username</label>
+                <input 
+                  style={inputStyle} 
+                  required 
+                  value={form.username} 
+                  onChange={e => setForm({ ...form, username: e.target.value })} 
+                  placeholder="Enter username" 
+                  autoComplete="new-username"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>{editUser ? 'New Password (leave blank to keep)' : 'Password'}</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    style={{ ...inputStyle, flex: 1 }} 
+                    type={showPassword ? 'text' : 'password'} 
+                    required={!editUser} 
+                    value={form.password} 
+                    onChange={e => setForm({ ...form, password: e.target.value })} 
+                    placeholder={editUser ? 'Leave blank to keep current' : 'Enter password'} 
+                    autoComplete="new-password"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    style={{ 
+                      padding: '10px 14px', 
+                      border: '1.5px solid #CBD5E1', 
+                      borderRadius: '8px', 
+                      background: 'white', 
+                      cursor: 'pointer', 
+                      fontSize: '0.85rem', 
+                      color: '#64748b', 
+                      whiteSpace: 'nowrap',
+                      height: '42px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {showPassword ? '🙈 Hide' : '👁 Show'}
+                  </button>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: 'var(--muted)' }}>
+                  🔒 Enter a strong, unique password to prevent browser security warnings.
+                </p>
+              </div>
               <div>
                 <label style={labelStyle}>Role</label>
                 <select style={inputStyle} value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
