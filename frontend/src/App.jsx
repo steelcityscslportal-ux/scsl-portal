@@ -2232,6 +2232,84 @@ function LeadsAdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
 
+  // CAPTCHA variables
+  const [captchaCode, setCaptchaCode] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+  const canvasRef = useRef(null);
+
+  const generateCaptcha = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+    setCaptchaInput('');
+    
+    // Draw in next tick so the canvas DOM node is fully rendered/updated
+    setTimeout(() => {
+      drawCaptcha(code);
+    }, 50);
+  };
+
+  const drawCaptcha = (code) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Light gradient background
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    grad.addColorStop(0, '#f8fafc');
+    grad.addColorStop(1, '#e2e8f0');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Noise background lines
+    const lineColors = ['#cbd5e1', '#94a3b8', '#cbd5e1', '#e2e8f0'];
+    for (let i = 0; i < 6; i++) {
+      ctx.strokeStyle = lineColors[Math.floor(Math.random() * lineColors.length)];
+      ctx.lineWidth = Math.random() * 2 + 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.lineTo(Math.random() * canvas.width, Math.random() * canvas.height);
+      ctx.stroke();
+    }
+
+    // Text characters
+    const fonts = ['Arial', 'Verdana', 'Courier New', 'Georgia', 'Trebuchet MS', 'Impact'];
+    const textColors = ['#0f172a', '#1e293b', '#334155', '#475569', '#0284c7', '#0369a1', '#0f766e'];
+    ctx.textBaseline = 'middle';
+    
+    for (let i = 0; i < code.length; i++) {
+      const char = code[i];
+      const fontSize = Math.floor(Math.random() * 8) + 24; // 24 to 32px
+      const font = fonts[Math.floor(Math.random() * fonts.length)];
+      ctx.font = `bold ${fontSize}px ${font}`;
+      ctx.fillStyle = textColors[Math.floor(Math.random() * textColors.length)];
+      
+      const x = 15 + i * 25 + Math.random() * 5;
+      const y = canvas.height / 2 + (Math.random() * 10 - 5);
+      const angle = (Math.random() * 30 - 15) * Math.PI / 180; // -15 to +15 deg
+      
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillText(char, 0, 0);
+      ctx.restore();
+    }
+
+    // Noise dots on top of the text
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = textColors[Math.floor(Math.random() * textColors.length)];
+      ctx.beginPath();
+      ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 1.5 + 0.5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  };
+
   const [leads, setLeads] = useState({ contacts: [], registrations: [], page_views: [], logins: [], account_openings: [], feedbacks: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -2281,11 +2359,20 @@ function LeadsAdminPage() {
       fetchLeads();
     } else {
       setLoading(false);
+      generateCaptcha();
     }
   }, [isAuthenticated]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
+    
+    // Check CAPTCHA
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setLoginError('Invalid CAPTCHA code. Please try again.');
+      generateCaptcha();
+      return;
+    }
+
     setLoggingIn(true);
     setLoginError('');
     const authHeaderVal = 'Basic ' + btoa(usernameInput + ':' + passwordInput);
@@ -2301,12 +2388,15 @@ function LeadsAdminPage() {
         setError(null);
       } else if (res.status === 401) {
         setLoginError('Invalid username or password.');
+        generateCaptcha();
       } else {
         setLoginError('Server error: ' + res.status);
+        generateCaptcha();
       }
     } catch (err) {
       console.error(err);
       setLoginError('Could not connect to the backend server.');
+      generateCaptcha();
     } finally {
       setLoggingIn(false);
     }
@@ -2463,6 +2553,65 @@ function LeadsAdminPage() {
                   fontSize: '0.95rem',
                   outline: 'none',
                   transition: 'var(--transition)'
+                }}
+              />
+            </div>
+
+            <div className="mform-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--navy)' }}>Security Code</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <canvas 
+                  ref={canvasRef} 
+                  width="180" 
+                  height="46" 
+                  style={{ 
+                    borderRadius: '10px', 
+                    border: '1px solid #CBD5E1',
+                    background: '#f1f5f9',
+                    display: 'block'
+                  }}
+                />
+                <button 
+                  type="button" 
+                  onClick={generateCaptcha}
+                  className="btn-ghost"
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '0.85rem',
+                    border: '1.5px solid var(--sky)',
+                    color: 'var(--blue)',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    borderRadius: '10px',
+                    height: '46px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                  title="Generate new CAPTCHA"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+              
+              <input 
+                type="text" 
+                placeholder="Enter the code shown above" 
+                required 
+                value={captchaInput} 
+                onChange={e => setCaptchaInput(e.target.value)} 
+                disabled={loggingIn}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  background: 'var(--white)',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  transition: 'var(--transition)',
+                  marginTop: '4px',
+                  textTransform: 'uppercase'
                 }}
               />
             </div>
