@@ -37,6 +37,8 @@ class Registration(Base):
     payment_utr = Column(String, default="")        # Transaction UTR/reference
     payment_status = Column(String, default="free") # "free", "paid", "pending"
     fee_paid = Column(Float, default=0.0)           # Amount paid
+    reminder_sent = Column(Boolean, default=False)
+    reminder_sent_at = Column(DateTime, nullable=True)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
 
 
@@ -88,6 +90,7 @@ class Webinar(Base):
     is_paid = Column(Boolean, default=False)
     fee_amount = Column(Float, default=0.0)
     payment_utr_required = Column(Boolean, default=True)
+    start_time = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
 class Feedback(Base):
@@ -99,6 +102,20 @@ class Feedback(Base):
     comment = Column(Text)
     is_approved = Column(Boolean, default=False)  # Hidden until admin approves
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+class AdminUser(Base):
+    __tablename__ = "admin_users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True)
+    password_hash = Column(String)
+    role = Column(String, default="supervisor") # "admin" or "supervisor"
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True)
+    value = Column(String)
 
 Base.metadata.create_all(bind=engine)
 
@@ -113,9 +130,12 @@ def run_migrations():
                     ("webinars", "is_paid", "BOOLEAN DEFAULT 0"),
                     ("webinars", "fee_amount", "REAL DEFAULT 0.0"),
                     ("webinars", "payment_utr_required", "BOOLEAN DEFAULT 1"),
+                    ("webinars", "start_time", "DATETIME"),
                     ("registrations", "payment_utr", "TEXT DEFAULT ''"),
                     ("registrations", "payment_status", "TEXT DEFAULT 'free'"),
-                    ("registrations", "fee_paid", "REAL DEFAULT 0.0")
+                    ("registrations", "fee_paid", "REAL DEFAULT 0.0"),
+                    ("registrations", "reminder_sent", "BOOLEAN DEFAULT 0"),
+                    ("registrations", "reminder_sent_at", "DATETIME")
                 ]
                 for table, col, definition in cols:
                     try:
@@ -129,9 +149,12 @@ def run_migrations():
                     "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT FALSE;",
                     "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS fee_amount DOUBLE PRECISION DEFAULT 0.0;",
                     "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS payment_utr_required BOOLEAN DEFAULT TRUE;",
+                    "ALTER TABLE webinars ADD COLUMN IF NOT EXISTS start_time TIMESTAMP;",
                     "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_utr VARCHAR(255) DEFAULT '';",
                     "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(50) DEFAULT 'free';",
-                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS fee_paid DOUBLE PRECISION DEFAULT 0.0;"
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS fee_paid DOUBLE PRECISION DEFAULT 0.0;",
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reminder_sent BOOLEAN DEFAULT FALSE;",
+                    "ALTER TABLE registrations ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMP;"
                 ]
                 for stmt in statements:
                     try:
@@ -143,4 +166,22 @@ def run_migrations():
         print(f"[MIGRATION] Error during startup migrations: {e}")
 
 run_migrations()
+
+def seed_admin_user():
+    import hashlib
+    db = SessionLocal()
+    try:
+        if db.query(AdminUser).count() == 0:
+            default_pwd = "scsladmin123"
+            pwd_hash = hashlib.sha256(default_pwd.encode()).hexdigest()
+            admin = AdminUser(username="admin", password_hash=pwd_hash, role="admin")
+            db.add(admin)
+            db.commit()
+            print("[SEED] Default admin user seeded successfully.")
+    except Exception as e:
+        print(f"[SEED] Error seeding admin user: {e}")
+    finally:
+        db.close()
+
+seed_admin_user()
 

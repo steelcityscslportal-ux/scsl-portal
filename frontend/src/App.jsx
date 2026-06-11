@@ -2014,6 +2014,215 @@ function WebinarManageTab({ authHeader, allRegistrations }) {
 }
 
 /* ═══════════════════════════════════════════════
+   11a. ADMIN USERS TAB (Super-Admin Only)
+   ═══════════════════════════════════════════════ */
+function AdminUsersTab({ authHeader }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editUser, setEditUser] = useState(null);
+  const [form, setForm] = useState({ username: '', password: '', role: 'supervisor' });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, { headers: { Authorization: authHeader } });
+      if (res.ok) setUsers(await res.json());
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const openCreate = () => { setEditUser(null); setForm({ username: '', password: '', role: 'supervisor' }); setShowForm(true); setMsg(''); };
+  const openEdit = (u) => { setEditUser(u); setForm({ username: u.username, password: '', role: u.role }); setShowForm(true); setMsg(''); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true); setMsg('');
+    try {
+      const method = editUser ? 'PUT' : 'POST';
+      const body = editUser
+        ? { id: editUser.id, username: form.username, password: form.password || undefined, role: form.role }
+        : { username: form.username, password: form.password, role: form.role };
+      const res = await fetch(`${API_BASE_URL}/api/admin/users`, {
+        method, headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) { setMsg('✅ Saved successfully!'); setShowForm(false); fetchUsers(); }
+      else setMsg('❌ Error: ' + (data.detail || 'Failed'));
+    } catch (e) { setMsg('❌ Network error'); }
+    setSaving(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this admin user? This cannot be undone.')) return;
+    const res = await fetch(`${API_BASE_URL}/api/admin/users/${id}`, { method: 'DELETE', headers: { Authorization: authHeader } });
+    const data = await res.json();
+    if (res.ok) fetchUsers();
+    else alert('Error: ' + (data.detail || 'Failed to delete'));
+  };
+
+  const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' };
+  const labelStyle = { fontWeight: 600, fontSize: '0.88rem', color: '#0a1628', display: 'block', marginBottom: '6px' };
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h3 style={{ color: 'var(--navy)', margin: 0, fontSize: '1.3rem' }}>👥 Admin User Management</h3>
+          <p style={{ color: 'var(--muted)', margin: '4px 0 0', fontSize: '0.9rem' }}>Create and manage staff logins. Supervisors cannot access System Settings or Admin Management.</p>
+        </div>
+        <button onClick={openCreate} className="btn-solid" style={{ border: 'none', cursor: 'pointer', padding: '10px 20px' }}>+ Add Staff</button>
+      </div>
+      {msg && <div style={{ padding: '10px 14px', borderRadius: '8px', background: msg.startsWith('✅') ? '#f0fdf4' : '#fef2f2', color: msg.startsWith('✅') ? '#16a34a' : '#dc2626', marginBottom: '16px', fontWeight: 600 }}>{msg}</div>}
+      {loading ? <div className="admin-loader">Loading...</div> : (
+        <table className="admin-table">
+          <thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Created</th><th>Actions</th></tr></thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id}>
+                <td>#{u.id}</td>
+                <td className="bold">{u.username}</td>
+                <td>
+                  <span style={{ padding: '3px 12px', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 700, background: u.role === 'admin' ? 'rgba(99,102,241,0.12)' : 'rgba(16,185,129,0.12)', color: u.role === 'admin' ? '#6366f1' : '#059669' }}>
+                    {u.role === 'admin' ? '⭐ Super Admin' : '👤 Supervisor'}
+                  </span>
+                </td>
+                <td>{new Date(u.created_at).toLocaleDateString()}</td>
+                <td style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => openEdit(u)} style={{ padding: '6px 14px', borderRadius: '8px', border: '1.5px solid var(--sky)', background: 'transparent', color: 'var(--blue)', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>Edit</button>
+                  <button onClick={() => handleDelete(u.id)} className="delete-btn">Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {showForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '36px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 24px', color: '#0a1628' }}>{editUser ? 'Edit Staff Account' : 'Create Staff Account'}</h3>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div><label style={labelStyle}>Username</label><input style={inputStyle} required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} placeholder="Enter username" /></div>
+              <div><label style={labelStyle}>{editUser ? 'New Password (leave blank to keep)' : 'Password'}</label><input style={inputStyle} type="password" required={!editUser} value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={editUser ? 'Leave blank to keep current' : 'Enter password'} /></div>
+              <div>
+                <label style={labelStyle}>Role</label>
+                <select style={inputStyle} value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}>
+                  <option value="supervisor">👤 Supervisor (limited access)</option>
+                  <option value="admin">⭐ Super Admin (full access)</option>
+                </select>
+              </div>
+              {msg && <div style={{ color: msg.startsWith('✅') ? '#16a34a' : '#dc2626', fontWeight: 600, fontSize: '0.9rem' }}>{msg}</div>}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setShowForm(false)} style={{ padding: '10px 22px', borderRadius: '10px', border: '1.5px solid #CBD5E1', background: 'white', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                <button type="submit" className="btn-solid" disabled={saving} style={{ border: 'none', cursor: 'pointer', padding: '10px 22px' }}>{saving ? 'Saving...' : 'Save'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   11b. SYSTEM SETTINGS TAB (Super-Admin Only)
+   ═══════════════════════════════════════════════ */
+function SystemSettingsTab({ authHeader }) {
+  const [settings, setSettings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [values, setValues] = useState({});
+  const [saving, setSaving] = useState({});
+  const [msgs, setMsgs] = useState({});
+  const [showPasswords, setShowPasswords] = useState({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/admin/settings`, { headers: { Authorization: authHeader } });
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+          const vals = {};
+          data.forEach(s => { vals[s.key] = s.value || ''; });
+          setValues(vals);
+        }
+      } catch (e) { console.error(e); }
+      setLoading(false);
+    })();
+  }, []);
+
+  const handleSave = async (key) => {
+    setSaving(prev => ({ ...prev, [key]: true }));
+    setMsgs(prev => ({ ...prev, [key]: '' }));
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: authHeader },
+        body: JSON.stringify({ key, value: values[key] })
+      });
+      const data = await res.json();
+      setMsgs(prev => ({ ...prev, [key]: res.ok ? '✅ Saved!' : '❌ ' + (data.detail || 'Error') }));
+    } catch (e) { setMsgs(prev => ({ ...prev, [key]: '❌ Network error' })); }
+    setSaving(prev => ({ ...prev, [key]: false }));
+    setTimeout(() => setMsgs(prev => ({ ...prev, [key]: '' })), 3000);
+  };
+
+  const inputStyle = { flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.95rem', outline: 'none', fontFamily: 'monospace' };
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <h3 style={{ color: 'var(--navy)', margin: '0 0 6px', fontSize: '1.3rem' }}>⚙️ System Settings</h3>
+        <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.9rem' }}>Configure email service credentials. These are stored securely in the database and override environment variables.</p>
+      </div>
+      <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '1.3rem' }}>💡</span>
+        <div style={{ fontSize: '0.88rem', color: '#92400e', lineHeight: '1.5' }}>
+          <strong>Priority:</strong> Settings saved here override Render environment variables. Leave a field blank to fall back to Render env vars.<br/>
+          <strong>Brevo API Key</strong> is recommended (free tier: 300 emails/day). Alternatively use SMTP with a Gmail app password.
+        </div>
+      </div>
+      {loading ? <div className="admin-loader">Loading settings...</div> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {settings.map(s => (
+            <div key={s.key} style={{ background: '#f8fafc', borderRadius: '14px', padding: '20px', border: '1px solid #e2e8f0' }}>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ fontWeight: 700, fontSize: '0.95rem', color: '#0a1628', display: 'block' }}>{s.label}</label>
+                <span style={{ fontSize: '0.82rem', color: '#94a3b8' }}>{s.hint}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  style={inputStyle}
+                  type={s.type === 'password' && !showPasswords[s.key] ? 'password' : 'text'}
+                  value={values[s.key] || ''}
+                  onChange={e => setValues(prev => ({ ...prev, [s.key]: e.target.value }))}
+                  placeholder={`Enter ${s.label.toLowerCase()}...`}
+                />
+                {s.type === 'password' && (
+                  <button type="button" onClick={() => setShowPasswords(prev => ({ ...prev, [s.key]: !prev[s.key] }))} style={{ padding: '10px 14px', border: '1.5px solid #CBD5E1', borderRadius: '8px', background: 'white', cursor: 'pointer', fontSize: '0.85rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                    {showPasswords[s.key] ? '🙈 Hide' : '👁 Show'}
+                  </button>
+                )}
+                <button onClick={() => handleSave(s.key)} disabled={saving[s.key]} className="btn-solid" style={{ border: 'none', cursor: 'pointer', padding: '10px 20px', whiteSpace: 'nowrap' }}>
+                  {saving[s.key] ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+              {msgs[s.key] && <div style={{ marginTop: '8px', fontSize: '0.85rem', fontWeight: 600, color: msgs[s.key].startsWith('✅') ? '#16a34a' : '#dc2626' }}>{msgs[s.key]}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage() {
@@ -2028,6 +2237,7 @@ function LeadsAdminPage() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState('contacts');
+  const [adminRole, setAdminRole] = useState('supervisor'); // 'admin' or 'supervisor'
 
   const fetchLeads = async () => {
     const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
@@ -2051,6 +2261,13 @@ function LeadsAdminPage() {
       const data = await res.json();
       setLeads(data);
       setError(null);
+      // Detect role by trying to call super-admin endpoint
+      try {
+        const roleRes = await fetch(`${API_BASE_URL}/api/admin/users`, {
+          headers: { 'Authorization': authHeaderVal }
+        });
+        setAdminRole(roleRes.ok ? 'admin' : 'supervisor');
+      } catch { setAdminRole('supervisor'); }
     } catch (err) {
       console.error(err);
       setError('Could not connect to backend server. Make sure the FastAPI backend is running.');
@@ -2329,6 +2546,16 @@ function LeadsAdminPage() {
             <button className={`admin-tab ${activeTab === 'feedbacks' ? 'active' : ''}`} onClick={() => setActiveTab('feedbacks')}>
               Reviews ({filteredFeedbacks.length})
             </button>
+            {adminRole === 'admin' && (
+              <>
+                <button className={`admin-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => setActiveTab('admins')}>
+                  👥 Manage Admins
+                </button>
+                <button className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+                  ⚙️ System Settings
+                </button>
+              </>
+            )}
           </div>
           <div className="admin-search-wrap">
             <input 
@@ -2345,6 +2572,9 @@ function LeadsAdminPage() {
           <div className="admin-loader">Loading records from database...</div>
         ) : activeTab === 'contacts' ? (
           <div className="admin-table-container">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>
+              <a href={`${API_BASE_URL}/api/export/contacts`} onClick={e => { e.preventDefault(); const a = document.createElement('a'); a.href = `${API_BASE_URL}/api/export/contacts`; const auth = sessionStorage.getItem('scsl_admin_auth'); fetch(a.href, { headers: { Authorization: auth } }).then(r => r.blob()).then(b => { const url = URL.createObjectURL(b); a.href = url; a.download = 'contacts.csv'; a.click(); }); }} className="btn-solid" style={{ padding: '8px 18px', fontSize: '0.85rem', textDecoration: 'none', border: 'none', cursor: 'pointer' }}>⬇ Export CSV</a>
+            </div>
             {filteredContacts.length === 0 ? (
               <div className="admin-empty">No contact leads found matching search.</div>
             ) : (
@@ -2380,6 +2610,9 @@ function LeadsAdminPage() {
           </div>
         ) : activeTab === 'registrations' ? (
           <div className="admin-table-container">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>
+              <a onClick={e => { e.preventDefault(); const auth = sessionStorage.getItem('scsl_admin_auth'); fetch(`${API_BASE_URL}/api/export/registrations`, { headers: { Authorization: auth } }).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'registrations.csv'; a.click(); }); }} className="btn-solid" style={{ padding: '8px 18px', fontSize: '0.85rem', textDecoration: 'none', border: 'none', cursor: 'pointer' }}>⬇ Export CSV</a>
+            </div>
             {filteredRegs.length === 0 ? (
               <div className="admin-empty">No webinar registrations found matching search.</div>
             ) : (
@@ -2417,6 +2650,9 @@ function LeadsAdminPage() {
           </div>
         ) : activeTab === 'accounts' ? (
           <div className="admin-table-container">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>
+              <a onClick={e => { e.preventDefault(); const auth = sessionStorage.getItem('scsl_admin_auth'); fetch(`${API_BASE_URL}/api/export/accounts`, { headers: { Authorization: auth } }).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'account_openings.csv'; a.click(); }); }} className="btn-solid" style={{ padding: '8px 18px', fontSize: '0.85rem', textDecoration: 'none', border: 'none', cursor: 'pointer' }}>⬇ Export CSV</a>
+            </div>
             {filteredAccounts.length === 0 ? (
               <div className="admin-empty">No account opening applications found matching search.</div>
             ) : (
@@ -2460,6 +2696,9 @@ function LeadsAdminPage() {
           <WebinarManageTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} allRegistrations={leads.registrations} />
         ) : activeTab === 'feedbacks' ? (
           <div className="admin-table-container">
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>
+              <a onClick={e => { e.preventDefault(); const auth = sessionStorage.getItem('scsl_admin_auth'); fetch(`${API_BASE_URL}/api/export/feedbacks`, { headers: { Authorization: auth } }).then(r => r.blob()).then(b => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'feedbacks.csv'; a.click(); }); }} className="btn-solid" style={{ padding: '8px 18px', fontSize: '0.85rem', textDecoration: 'none', border: 'none', cursor: 'pointer' }}>⬇ Export CSV</a>
+            </div>
             {filteredFeedbacks.length === 0 ? (
               <div className="admin-empty">No feedback submissions yet.</div>
             ) : (
@@ -2505,6 +2744,10 @@ function LeadsAdminPage() {
               </table>
             )}
           </div>
+        ) : activeTab === 'admins' ? (
+          <AdminUsersTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} />
+        ) : activeTab === 'settings' ? (
+          <SystemSettingsTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} />
         ) : null}
 
         {activeTab === 'analytics' && (
