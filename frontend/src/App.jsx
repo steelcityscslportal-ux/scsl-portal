@@ -816,14 +816,14 @@ function LiveNews({ isFullPage = false }) {
             </div>
           ) : (
             <div className="news-grid-layout">
-              {filteredNews.map(item => (
+              {filteredNews.map((item, idx) => (
                 <motion.div 
                   key={item.id} 
                   className="news-grid-card"
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -6, boxShadow: '0 20px 35px rgba(0, 119, 182, 0.08)' }}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05, duration: 0.5 }}
+                  whileHover={{ y: -8, boxShadow: '0 24px 48px rgba(0, 119, 182, 0.12)' }}
                 >
                   <div className="news-grid-card-header">
                     <span className="news-badge">{item.section || "Market Updates"}</span>
@@ -4246,7 +4246,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
+      if (['home', 'news', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
         setPage(hash);
         window.scrollTo(0, 0);
       } else if (hash === '') {
@@ -4288,7 +4288,6 @@ export default function App() {
             <Hero cmsContent={cmsContent} onOpenAccountClick={() => setShowOpenAccount(true)} />
             <TrustStatsBar cmsContent={cmsContent} />
             <WhyWebinars cmsContent={cmsContent} />
-            <LiveNews />
             <Services limit={3} cmsContent={cmsContent} />
             <Testimonials />
             <FeedbackSection />
