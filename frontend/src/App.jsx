@@ -716,8 +716,16 @@ function LiveNews() {
     const fetchNews = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/live-news`);
-        const data = await res.json();
-        setNews(data);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            setNews(data);
+          } else {
+            console.error("News data is not an array:", data);
+          }
+        } else {
+          console.error("Failed to fetch news, status:", res.status);
+        }
       } catch (err) {
         console.error("Failed to fetch news:", err);
       } finally {
@@ -749,7 +757,7 @@ function LiveNews() {
     );
   }
 
-  if (news.length === 0) return null;
+  if (!Array.isArray(news) || news.length === 0) return null;
 
   const marqueeItems = [...news, ...news];
 
