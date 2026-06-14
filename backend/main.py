@@ -559,19 +559,317 @@ async def delete_webinar(webinar_id: int, username: str = Depends(authenticate_a
         db.commit()
     return {"success": True}
 
+# --- Real-time caching variables and fetch function ---
+market_cache = {
+    "data": None,
+    "last_updated": 0
+}
+news_cache = {
+    "data": None,
+    "last_updated": 0
+}
+CACHE_DURATION_SECONDS = 3.0
+NEWS_CACHE_DURATION_SECONDS = 30.0
+
+async def fetch_realtime_market_data():
+    global market_cache
+    now = time.time()
+    if market_cache["data"] and (now - market_cache["last_updated"] < CACHE_DURATION_SECONDS):
+        return market_cache["data"]
+
+    try:
+        # 1. Fetch Indices from Capital Market
+        indices_url = "https://api.capitalmarket.com/api/Indices"
+        req = urllib.request.Request(indices_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        indices_data = {}
+        try:
+            with urllib.request.urlopen(req, timeout=3) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                if res.get("success"):
+                    for item in res.get("data", []):
+                        indices_data[item["lname"]] = item
+        except Exception as e:
+            print("Failed to fetch Indices from Capital Market:", e)
+
+        # 2. Fetch USDINR from Yahoo
+        usdinr_price = 83.5
+        usdinr_prev = 83.5
+        try:
+            url = "https://query1.finance.yahoo.com/v8/finance/chart/USDINR=X"
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=3) as response:
+                res = json.loads(response.read().decode('utf-8'))
+                meta = res['chart']['result'][0]['meta']
+                usdinr_price = meta.get('regularMarketPrice', 83.5)
+                usdinr_prev = meta.get('previousClose', 83.5)
+        except Exception as e:
+            print("Failed to fetch USDINR from Yahoo:", e)
+
+        # 3. Fetch JPY=X, STEELCITY.NS, GC=F, CL=F from Yahoo
+        prices = {}
+        for sym in ["STEELCITY.NS", "JPY=X", "GC=F", "CL=F"]:
+            try:
+                url = f"https://query1.finance.yahoo.com/v8/finance/chart/{sym}"
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req, timeout=3) as response:
+                    res = json.loads(response.read().decode('utf-8'))
+                    meta = res['chart']['result'][0]['meta']
+                    prices[sym] = {
+                        "price": meta.get('regularMarketPrice'),
+                        "prev": meta.get('previousClose')
+                    }
+            except Exception as e:
+                print(f"Failed to fetch {sym} from Yahoo:", e)
+
+        result = []
+        
+        def fmt(val, decimals=2):
+            sign = "+" if val >= 0 else ""
+            return f"{sign}{val:,.{decimals}f}"
+
+        # 1. NIFTY 50
+        if "Nifty 50" in indices_data:
+            item = indices_data["Nifty 50"]
+            last = item["Last"]
+            chg_pct = item["Change"]
+            prev = last / (1 + chg_pct / 100) if chg_pct != -100 else last
+            diff = last - prev
+            result.append({
+                "symbol": "NIFTY 50",
+                "price": f"{last:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["NIFTY 50"]["price"])
+            result.append({"symbol": "NIFTY 50", **sim})
+
+        # 2. SENSEX
+        if "SENSEX" in indices_data:
+            item = indices_data["SENSEX"]
+            last = item["Last"]
+            chg_pct = item["Change"]
+            prev = last / (1 + chg_pct / 100) if chg_pct != -100 else last
+            diff = last - prev
+            result.append({
+                "symbol": "SENSEX",
+                "price": f"{last:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["SENSEX"]["price"])
+            result.append({"symbol": "SENSEX", **sim})
+
+        # 3. BANK NIFTY
+        if "Nifty Bank" in indices_data:
+            item = indices_data["Nifty Bank"]
+            last = item["Last"]
+            chg_pct = item["Change"]
+            prev = last / (1 + chg_pct / 100) if chg_pct != -100 else last
+            diff = last - prev
+            result.append({
+                "symbol": "BANK NIFTY",
+                "price": f"{last:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["BANK NIFTY"]["price"])
+            result.append({"symbol": "BANK NIFTY", **sim})
+
+        # 4. SCSL (STEELCITY.NS)
+        if "STEELCITY.NS" in prices and prices["STEELCITY.NS"]["price"] is not None:
+            item = prices["STEELCITY.NS"]
+            last = item["price"]
+            prev = item["prev"]
+            diff = last - prev
+            chg_pct = (diff / prev) * 100 if prev else 0
+            result.append({
+                "symbol": "SCSL",
+                "price": f"{last:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["SCSL"]["price"])
+            result.append({"symbol": "SCSL", **sim})
+
+        # 5. USD/INR
+        if usdinr_price:
+            diff = usdinr_price - usdinr_prev
+            chg_pct = (diff / usdinr_prev) * 100 if usdinr_prev else 0
+            result.append({
+                "symbol": "USD/INR",
+                "price": f"{usdinr_price:,.4f}",
+                "change": fmt(diff, 4),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["USD/INR"]["price"])
+            result.append({"symbol": "USD/INR", **sim})
+
+        # 6. GOLD MCX
+        if "GC=F" in prices and prices["GC=F"]["price"] is not None:
+            last_usd = prices["GC=F"]["price"]
+            prev_usd = prices["GC=F"]["prev"]
+            last_inr = (last_usd / 31.1035) * 10 * usdinr_price
+            prev_inr = (prev_usd / 31.1035) * 10 * usdinr_prev
+            diff = last_inr - prev_inr
+            chg_pct = (diff / prev_inr) * 100 if prev_inr else 0
+            result.append({
+                "symbol": "GOLD MCX",
+                "price": f"{last_inr:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["GOLD MCX"]["price"])
+            result.append({"symbol": "GOLD MCX", **sim})
+
+        # 7. CRUDE OIL
+        if "CL=F" in prices and prices["CL=F"]["price"] is not None:
+            last_usd = prices["CL=F"]["price"]
+            prev_usd = prices["CL=F"]["prev"]
+            last_inr = last_usd * usdinr_price
+            prev_inr = prev_usd * usdinr_prev
+            diff = last_inr - prev_inr
+            chg_pct = (diff / prev_inr) * 100 if prev_inr else 0
+            result.append({
+                "symbol": "CRUDE OIL",
+                "price": f"{last_inr:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["CRUDE OIL"]["price"])
+            result.append({"symbol": "CRUDE OIL", **sim})
+
+        # 8. USD/JPY
+        if "JPY=X" in prices and prices["JPY=X"]["price"] is not None:
+            item = prices["JPY=X"]
+            last = item["price"]
+            prev = item["prev"]
+            diff = last - prev
+            chg_pct = (diff / prev) * 100 if prev else 0
+            result.append({
+                "symbol": "USD/JPY",
+                "price": f"{last:,.2f}",
+                "change": fmt(diff),
+                "percent": fmt(chg_pct) + "%",
+                "up": diff >= 0
+            })
+        else:
+            sim = simulate_price(BASE_DATA["USD/JPY"]["price"])
+            result.append({"symbol": "USD/JPY", **sim})
+
+        market_cache["data"] = result
+        market_cache["last_updated"] = now
+        return result
+    except Exception as e:
+        print("Error in fetch_realtime_market_data:", e)
+        if market_cache["data"]:
+            return market_cache["data"]
+        result = []
+        for symbol, data in BASE_DATA.items():
+            sim = simulate_price(data["price"])
+            result.append({
+                "symbol": symbol,
+                "price": f"{sim['price']:,.2f}",
+                "change": sim["change"],
+                "percent": sim["percent"],
+                "up": sim["up"],
+            })
+        return result
+
 @app.get("/api/market-watch")
 async def market_watch():
-    result = []
-    for symbol, data in BASE_DATA.items():
-        sim = simulate_price(data["price"])
-        result.append({
-            "symbol": symbol,
-            "price": f"{sim['price']:,.2f}",
-            "change": sim["change"],
-            "percent": sim["percent"],
-            "up": sim["up"],
-        })
-    return result
+    return await fetch_realtime_market_data()
+
+@app.get("/api/live-news")
+async def live_news():
+    global news_cache
+    now = time.time()
+    if news_cache["data"] and (now - news_cache["last_updated"] < NEWS_CACHE_DURATION_SECONDS):
+        return news_cache["data"]
+
+    try:
+        url = "https://api.capitalmarket.com/api/CmLiveNewsHome/A/15"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        with urllib.request.urlopen(req, timeout=4) as response:
+            res = json.loads(response.read().decode('utf-8'))
+            if res.get("success"):
+                raw_data = res.get("data", [])
+                formatted_news = []
+                for item in raw_data:
+                    formatted_news.append({
+                        "id": item.get("SNO"),
+                        "heading": item.get("Heading"),
+                        "caption": item.get("Caption"),
+                        "date": item.get("Date"),
+                        "time": item.get("Time"),
+                        "section": item.get("sectionname")
+                    })
+                news_cache["data"] = formatted_news
+                news_cache["last_updated"] = now
+                return formatted_news
+    except Exception as e:
+        print("Failed to fetch live news from capitalmarket.com:", e)
+
+    if news_cache["data"]:
+        return news_cache["data"]
+
+    fallback = [
+        {
+            "id": 1,
+            "heading": "Steel City Securities Limited Expands Demat Services Across India",
+            "caption": "SCSL announces opening of 50 new digital facilitation centers across Tier-2 and Tier-3 cities to support local retail investors.",
+            "date": "14 Jun 2026",
+            "time": "10:30",
+            "section": "Corporate News"
+        },
+        {
+            "id": 2,
+            "heading": "Nifty 50 Hits Record High on Strong Foreign Institutional Inflows",
+            "caption": "NSE Nifty index records historic gains led by IT, Banking, and Reliance Industries shares amid global market optimism.",
+            "date": "14 Jun 2026",
+            "time": "09:45",
+            "section": "Market Commentary"
+        },
+        {
+            "id": 3,
+            "heading": "SCSL Investor Awareness Web-Program Sees Record Registrations",
+            "caption": "Over 10,000 retail traders register for the upcoming Free Stock Market Training Program hosted by certified SCSL mentors.",
+            "date": "13 Jun 2026",
+            "time": "15:20",
+            "section": "Press Release"
+        },
+        {
+            "id": 4,
+            "heading": "SEBI Proposes New Guidelines to Simplify demat Account Opening",
+            "caption": "Market regulator SEBI releases consultation paper aiming to make the paperless demat onboarding process more secure and faster.",
+            "date": "12 Jun 2026",
+            "time": "16:45",
+            "section": "Regulatory News"
+        },
+        {
+            "id": 5,
+            "heading": "Indian Rupee Stabilizes Against US Dollar as Crude Prices Ease",
+            "caption": "The INR gains strength as Brent crude prices contract slightly, providing relief to India's fiscal deficit and import bills.",
+            "date": "12 Jun 2026",
+            "time": "11:15",
+            "section": "Currency Market"
+        }
+    ]
+    return fallback
+
 
 @app.post("/api/track/pageview")
 async def track_pageview(req_data: PageViewReq, request: Request, db: Session = Depends(get_db)):

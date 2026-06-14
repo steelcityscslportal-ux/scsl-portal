@@ -7,7 +7,7 @@ import {
   Landmark, Coins, PiggyBank, Calendar, Users, Video,
   Briefcase, Rocket, UserCheck, FileText, Laptop,
   CreditCard, Activity, Search, Network, GraduationCap,
-  Home, BookOpen, Shield
+  Home, BookOpen, Shield, Newspaper, Clock
 } from 'lucide-react';
 import './App.css';
 
@@ -701,6 +701,129 @@ function ServiceCard({ svc, idx }) {
       <ul className="svc-features">{svc.features.map(f => <li key={f}><CheckCircle size={14} /> {f}</li>)}</ul>
       <a href="#contact" className="svc-link">Learn More <ArrowRight size={15} /></a>
     </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   LIVE NEWS SECTION (Real-time data from CM API)
+   ═══════════════════════════════════════════════ */
+function LiveNews() {
+  const [news, setNews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedNews, setSelectedNews] = useState(null);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/live-news`);
+        const data = await res.json();
+        setNews(data);
+      } catch (err) {
+        console.error("Failed to fetch news:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNews();
+    const interval = setInterval(fetchNews, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="live-news-section">
+        <div className="container">
+          <div className="section-header-center">
+            <span className="live-news-tag">
+              <span className="live-indicator-pulse"></span> LIVE MARKET NEWS
+            </span>
+            <h2 className="live-news-title">Pulse of the Financial Markets</h2>
+          </div>
+          <div className="live-news-loading">
+            <div className="news-spinner"></div>
+            <p>Fetching real-time market updates...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (news.length === 0) return null;
+
+  const marqueeItems = [...news, ...news];
+
+  return (
+    <section className="live-news-section">
+      <div className="container">
+        <div className="section-header-center">
+          <span className="live-news-tag">
+            <span className="live-indicator-pulse"></span> LIVE MARKET NEWS
+          </span>
+          <h2 className="live-news-title">Pulse of the Financial Markets</h2>
+          <p className="live-news-sub">Real-time market bulletins, IPO updates, corporate earnings, and key macroeconomic news sourced live.</p>
+        </div>
+
+        <div className="marquee-wrapper">
+          <div className="marquee-fade-left"></div>
+          <div className="marquee-fade-right"></div>
+          <div className="marquee-container">
+            <div className="marquee-track">
+              {marqueeItems.map((item, idx) => (
+                <div 
+                  key={`${item.id}-${idx}`} 
+                  className="news-card-marquee"
+                  onClick={() => setSelectedNews(item)}
+                >
+                  <div className="news-card-top">
+                    <span className="news-badge">{item.section || "Market Updates"}</span>
+                    <span className="news-time">
+                      <Clock size={12} /> {item.time || "Just now"}
+                    </span>
+                  </div>
+                  <h3 className="news-card-title">{item.heading}</h3>
+                  <div className="news-card-hover-hint">Click to read details</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {selectedNews && (
+          <div className="modal-overlay" onClick={() => setSelectedNews(null)}>
+            <motion.div 
+              className="news-detail-modal"
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="news-modal-close" onClick={() => setSelectedNews(null)}>
+                <X size={20} />
+              </button>
+              <div className="news-modal-header">
+                <span className="news-badge">{selectedNews.section}</span>
+                <span className="news-modal-time">
+                  <Calendar size={13} /> {selectedNews.date} at {selectedNews.time}
+                </span>
+              </div>
+              <h2 className="news-modal-title">{selectedNews.heading}</h2>
+              <div className="news-modal-content-wrap">
+                <p className="news-modal-caption">
+                  {selectedNews.caption || "No further details available for this bulletin."}
+                </p>
+              </div>
+              <div className="news-modal-footer">
+                <p className="news-modal-source">Source: Capital Market Publishers</p>
+                <button className="btn-secondary" onClick={() => setSelectedNews(null)}>Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </section>
   );
 }
 
@@ -4032,6 +4155,7 @@ export default function App() {
             <Hero cmsContent={cmsContent} onOpenAccountClick={() => setShowOpenAccount(true)} />
             <TrustStatsBar cmsContent={cmsContent} />
             <WhyWebinars cmsContent={cmsContent} />
+            <LiveNews />
             <Services limit={3} cmsContent={cmsContent} />
             <Testimonials />
             <FeedbackSection />
