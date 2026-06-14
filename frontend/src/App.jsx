@@ -215,14 +215,30 @@ function TrustStatsItem({ target, suffix, label, icon: Icon }) {
   );
 }
 
-function TrustStatsBar() {
+function TrustStatsBar({ cmsContent = {} }) {
+  const target1 = parseInt(cmsContent.trust_stat1_num) || 31;
+  const suffix1 = cmsContent.trust_stat1_suffix !== undefined ? cmsContent.trust_stat1_suffix : "+";
+  const label1 = cmsContent.trust_stat1_lbl || "Years of Trust";
+
+  const target2 = parseInt(cmsContent.trust_stat2_num) || 400000;
+  const suffix2 = cmsContent.trust_stat2_suffix !== undefined ? cmsContent.trust_stat2_suffix : "+";
+  const label2 = cmsContent.trust_stat2_lbl || "Investors Served";
+
+  const target3 = parseInt(cmsContent.trust_stat3_num) || 420;
+  const suffix3 = cmsContent.trust_stat3_suffix !== undefined ? cmsContent.trust_stat3_suffix : "+";
+  const label3 = cmsContent.trust_stat3_lbl || "Pan India Locations";
+
+  const target4 = parseInt(cmsContent.trust_stat4_num) || 22;
+  const suffix4 = cmsContent.trust_stat4_suffix !== undefined ? cmsContent.trust_stat4_suffix : "";
+  const label4 = cmsContent.trust_stat4_lbl || "States (e-Gov)";
+
   return (
     <section className="trust-stats-section">
       <div className="container trust-stats-grid">
-        <TrustStatsItem target={31} suffix="+" label="Years of Trust" icon={Award} />
-        <TrustStatsItem target={400000} suffix="+" label="Investors Served" icon={Users} />
-        <TrustStatsItem target={420} suffix="+" label="Pan India Locations" icon={MapPin} />
-        <TrustStatsItem target={22} suffix="" label="States (e-Gov)" icon={Globe} />
+        <TrustStatsItem target={target1} suffix={suffix1} label={label1} icon={Award} />
+        <TrustStatsItem target={target2} suffix={suffix2} label={label2} icon={Users} />
+        <TrustStatsItem target={target3} suffix={suffix3} label={label3} icon={MapPin} />
+        <TrustStatsItem target={target4} suffix={suffix4} label={label4} icon={Globe} />
       </div>
     </section>
   );
@@ -563,36 +579,36 @@ function StatItem({ value, suffix, label, icon: Icon }) {
   );
 }
 
-function WhyWebinars() {
+function WhyWebinars({ cmsContent = {} }) {
   const features = [
     {
-      title: "Why Watch SCSL Webinars?",
+      title: cmsContent.why_card1_title || "Why Watch SCSL Webinars?",
       icon: Video,
       color: "var(--sky)",
       points: [
-        "Learn directly from SEBI-registered research analysts with decades of hands-on experience.",
-        "See live market charting, live trade setups, and real-time execution methods.",
-        "Get direct access to Q&A sessions to clarify your specific portfolio and trading queries."
+        cmsContent.why_card1_p1 || "Learn directly from SEBI-registered research analysts with decades of hands-on experience.",
+        cmsContent.why_card1_p2 || "See live market charting, live trade setups, and real-time execution methods.",
+        cmsContent.why_card1_p3 || "Get direct access to Q&A sessions to clarify your specific portfolio and trading queries."
       ]
     },
     {
-      title: "Why Register in Advance?",
+      title: cmsContent.why_card2_title || "Why Register in Advance?",
       icon: Calendar,
       color: "#FFD700",
       points: [
-        "Secure priority seat reservation as live session rooms have limited capacity.",
-        "Receive custom trading templates, strategy spreadsheets, and market cheatsheets.",
-        "Get the full HD recorded session and summary notes sent directly to your inbox."
+        cmsContent.why_card2_p1 || "Secure priority seat reservation as live session rooms have limited capacity.",
+        cmsContent.why_card2_p2 || "Receive custom trading templates, strategy spreadsheets, and market cheatsheets.",
+        cmsContent.why_card2_p3 || "Get the full HD recorded session and summary notes sent directly to your inbox."
       ]
     },
     {
-      title: "What is the Practical Use?",
+      title: cmsContent.why_card3_title || "What is the Practical Use?",
       icon: TrendingUp,
       color: "var(--green)",
       points: [
-        "Master risk-reward ratios, stop-loss strategy, and emotional discipline.",
-        "Build standalone trading plans for intraday, swing trading, and investing.",
-        "Receive post-webinar support and guidance from the SCSL support team."
+        cmsContent.why_card3_p1 || "Master risk-reward ratios, stop-loss strategy, and emotional discipline.",
+        cmsContent.why_card3_p2 || "Build standalone trading plans for intraday, swing trading, and investing.",
+        cmsContent.why_card3_p3 || "Receive post-webinar support and guidance from the SCSL support team."
       ]
     }
   ];
@@ -605,10 +621,10 @@ function WhyWebinars() {
       </div>
       <div className="container">
         <div className="section-header">
-          <span className="section-tag" style={{ background: 'rgba(135, 206, 235, 0.15)', color: 'var(--sky)' }}>Investor Empowerment</span>
-          <h2 className="section-title" style={{ color: 'var(--white)' }}>Why Choose SCSL Webinars?</h2>
+          <span className="section-tag" style={{ background: 'rgba(135, 206, 235, 0.15)', color: 'var(--sky)' }}>{cmsContent.why_webinars_tag || "Investor Empowerment"}</span>
+          <h2 className="section-title" style={{ color: 'var(--white)' }}>{cmsContent.why_webinars_title || "Why Choose SCSL Webinars?"}</h2>
           <p className="section-sub" style={{ color: 'rgba(255, 255, 255, 0.7)', margin: '12px auto 0' }}>
-            Transform your understanding of the financial markets with professional guidance and actionable insights.
+            {cmsContent.why_webinars_sub || "Transform your understanding of the financial markets with professional guidance and actionable insights."}
           </p>
         </div>
 
@@ -688,15 +704,94 @@ function ServiceCard({ svc, idx }) {
   );
 }
 
-function Services({ limit }) {
-  const displayedServices = limit ? services.slice(0, limit) : services;
+function Services({ limit, cmsContent = {} }) {
+  const dynamicServices = [
+    {
+      icon: BarChart3,
+      color: '#0077B6',
+      title: cmsContent.svc1_title || 'Stock Broking',
+      desc: cmsContent.svc1_desc || 'Equity, Futures & Options, Commodities, and Currency Derivatives across NSE, BSE, MCX, NCDEX & MSEI.',
+      features: [
+        cmsContent.svc1_f1 || 'Equity Cash & F&O',
+        cmsContent.svc1_f2 || 'Commodity & Currency',
+        cmsContent.svc1_f3 || 'Research & Advisory',
+        cmsContent.svc1_f4 || '24×7 Back-Office'
+      ].filter(Boolean)
+    },
+    {
+      icon: Landmark,
+      color: '#0096C7',
+      title: cmsContent.svc2_title || 'Depository Services',
+      desc: cmsContent.svc2_desc || 'Participant of both NSDL & CDSL. Safe dematerialization and electronic transfer of securities.',
+      features: [
+        cmsContent.svc2_f1 || 'NSDL & CDSL DP',
+        cmsContent.svc2_f2 || 'e-DIS & e-Mandate',
+        cmsContent.svc2_f3 || 'Pledge & Margin',
+        cmsContent.svc2_f4 || 'Nomination Facility'
+      ].filter(Boolean)
+    },
+    {
+      icon: Globe,
+      color: '#00B4D8',
+      title: cmsContent.svc3_title || 'e-Governance',
+      desc: cmsContent.svc3_desc || 'Authorized TIN-FC centers across 22 states providing PAN, TAN, e-TDS, and AIR services.',
+      features: [
+        cmsContent.svc3_f1 || 'PAN Card Services',
+        cmsContent.svc3_f2 || 'TAN Registration',
+        cmsContent.svc3_f3 || 'e-TDS Filing',
+        cmsContent.svc3_f4 || 'AIR Reporting'
+      ].filter(Boolean)
+    },
+    {
+      icon: ShieldCheck,
+      color: '#48CAE4',
+      title: cmsContent.svc4_title || 'Life Insurance',
+      desc: cmsContent.svc4_desc || 'Corporate Agent for SBI Life Insurance — securing the financial future of your family.',
+      features: [
+        cmsContent.svc4_f1 || 'Term Insurance',
+        cmsContent.svc4_f2 || 'ULIP Plans',
+        cmsContent.svc4_f3 || 'Child Plans',
+        cmsContent.svc4_f4 || 'Retirement Plans'
+      ].filter(Boolean)
+    },
+    {
+      icon: Coins,
+      color: '#0077B6',
+      title: cmsContent.svc5_title || 'NBFC Loan Services',
+      desc: cmsContent.svc5_desc || 'Quick and hassle-free loan solutions through our registered NBFC arm.',
+      features: [
+        cmsContent.svc5_f1 || 'Personal Loans',
+        cmsContent.svc5_f2 || 'Gold Loans',
+        cmsContent.svc5_f3 || 'Business Loans',
+        cmsContent.svc5_f4 || 'Loans Against Securities'
+      ].filter(Boolean)
+    },
+    {
+      icon: PiggyBank,
+      color: '#0096C7',
+      title: cmsContent.svc6_title || 'Investments',
+      desc: cmsContent.svc6_desc || 'Mutual Funds, IPO Distribution, and National Pension System through expert wealth advisors.',
+      features: [
+        cmsContent.svc6_f1 || 'Mutual Funds SIP',
+        cmsContent.svc6_f2 || 'IPO Applications',
+        cmsContent.svc6_f3 || 'NPS (POP-PFRDA)',
+        cmsContent.svc6_f4 || 'Portfolio Review'
+      ].filter(Boolean)
+    }
+  ];
+
+  const displayedServices = limit ? dynamicServices.slice(0, limit) : dynamicServices;
+  const sectionTag = cmsContent.services_tag || "Our Expertise";
+  const sectionTitle = cmsContent.services_title || "Comprehensive Financial Solutions";
+  const sectionSub = cmsContent.services_sub || "One platform. Every financial need. Backed by 31 years of excellence.";
+
   return (
     <section className="services-section">
       <div className="container">
         <div className="section-header">
-          <span className="section-tag">Our Expertise</span>
-          <h2 className="section-title">Comprehensive Financial Solutions</h2>
-          <p className="section-sub">One platform. Every financial need. Backed by 31 years of excellence.</p>
+          <span className="section-tag">{sectionTag}</span>
+          <h2 className="section-title">{sectionTitle}</h2>
+          <p className="section-sub">{sectionSub}</p>
         </div>
         <div className="services-grid">{displayedServices.map((svc, idx) => <ServiceCard key={idx} svc={svc} idx={idx} />)}</div>
         {limit && (
@@ -2357,7 +2452,8 @@ function SystemSettingsTab({ authHeader }) {
    11c. HOMEPAGE CMS TAB (Admin Sub-Component)
    ═══════════════════════════════════════════════ */
 function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
-  const [subTab, setSubTab] = useState('hero1'); // 'hero1', 'hero2', 'hero3', 'ceo', 'about', 'contact'
+  const [subTab, setSubTab] = useState('hero1'); // 'hero1', 'hero2', 'hero3', 'ceo', 'about', 'contact', 'stats', 'why_webinars', 'services'
+  const [selectedServiceIndex, setSelectedServiceIndex] = useState(1);
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
@@ -2370,7 +2466,35 @@ function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
       'hero_slide3_badge', 'hero_slide3_title', 'hero_slide3_title_size', 'hero_slide3_subtitle', 'hero_slide3_desc', 'hero_slide3_image',
       'ceo_name', 'ceo_title', 'ceo_quote', 'ceo_image',
       'about_tag', 'about_title', 'about_title_size', 'about_text_p1', 'about_text_p2', 'about_quote', 'about_quote_cite', 'about_vision', 'about_mission',
-      'contact_tag', 'contact_title', 'contact_title_size', 'contact_text', 'contact_address', 'contact_phone', 'contact_email'
+      'contact_tag', 'contact_title', 'contact_title_size', 'contact_text', 'contact_address', 'contact_phone', 'contact_email',
+
+      // Trust Stats Bar
+      'trust_stat1_num', 'trust_stat1_suffix', 'trust_stat1_lbl',
+      'trust_stat2_num', 'trust_stat2_suffix', 'trust_stat2_lbl',
+      'trust_stat3_num', 'trust_stat3_suffix', 'trust_stat3_lbl',
+      'trust_stat4_num', 'trust_stat4_suffix', 'trust_stat4_lbl',
+
+      // Why Webinars
+      'why_webinars_tag', 'why_webinars_title', 'why_webinars_sub',
+      'why_card1_title', 'why_card1_p1', 'why_card1_p2', 'why_card1_p3',
+      'why_card2_title', 'why_card2_p1', 'why_card2_p2', 'why_card2_p3',
+      'why_card3_title', 'why_card3_p1', 'why_card3_p2', 'why_card3_p3',
+
+      // Services Section Header
+      'services_tag', 'services_title', 'services_sub',
+      
+      // Services Card 1
+      'svc1_title', 'svc1_desc', 'svc1_f1', 'svc1_f2', 'svc1_f3', 'svc1_f4',
+      // Services Card 2
+      'svc2_title', 'svc2_desc', 'svc2_f1', 'svc2_f2', 'svc2_f3', 'svc2_f4',
+      // Services Card 3
+      'svc3_title', 'svc3_desc', 'svc3_f1', 'svc3_f2', 'svc3_f3', 'svc3_f4',
+      // Services Card 4
+      'svc4_title', 'svc4_desc', 'svc4_f1', 'svc4_f2', 'svc4_f3', 'svc4_f4',
+      // Services Card 5
+      'svc5_title', 'svc5_desc', 'svc5_f1', 'svc5_f2', 'svc5_f3', 'svc5_f4',
+      // Services Card 6
+      'svc6_title', 'svc6_desc', 'svc6_f1', 'svc6_f2', 'svc6_f3', 'svc6_f4'
     ];
     keys.forEach(k => {
       initialValues[k] = cmsContent[k] || '';
@@ -2482,6 +2606,9 @@ function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
         <button className={`cms-sidebar-btn ${subTab === 'hero1' ? 'active' : ''}`} onClick={() => setSubTab('hero1')}>🔥 Hero Slide 1</button>
         <button className={`cms-sidebar-btn ${subTab === 'hero2' ? 'active' : ''}`} onClick={() => setSubTab('hero2')}>📢 Hero Slide 2</button>
         <button className={`cms-sidebar-btn ${subTab === 'hero3' ? 'active' : ''}`} onClick={() => setSubTab('hero3')}>🏆 Hero Slide 3</button>
+        <button className={`cms-sidebar-btn ${subTab === 'stats' ? 'active' : ''}`} onClick={() => setSubTab('stats')}>📊 Trust Stats</button>
+        <button className={`cms-sidebar-btn ${subTab === 'why_webinars' ? 'active' : ''}`} onClick={() => setSubTab('why_webinars')}>💡 Why Webinars</button>
+        <button className={`cms-sidebar-btn ${subTab === 'services' ? 'active' : ''}`} onClick={() => setSubTab('services')}>🛠 Services</button>
         <button className={`cms-sidebar-btn ${subTab === 'ceo' ? 'active' : ''}`} onClick={() => setSubTab('ceo')}>💼 CEO Details</button>
         <button className={`cms-sidebar-btn ${subTab === 'about' ? 'active' : ''}`} onClick={() => setSubTab('about')}>📖 About Section</button>
         <button className={`cms-sidebar-btn ${subTab === 'contact' ? 'active' : ''}`} onClick={() => setSubTab('contact')}>📞 Contact Details</button>
@@ -2521,6 +2648,102 @@ function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
             {renderInputField('hero_slide3_subtitle', 'Sub-heading')}
             {renderTextareaField('hero_slide3_desc', 'Description Paragraph', 3)}
             {renderImageField('hero_slide3_image', 'Slide Image', '/slide3.png')}
+          </div>
+        )}
+
+        {subTab === 'stats' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>📊 Trust Statistics Counter</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0' }}>Stat 1 (e.g. Years of Trust)</h4>
+                {renderInputField('trust_stat1_num', 'Number Value', 'e.g. 31')}
+                {renderInputField('trust_stat1_suffix', 'Suffix Symbol', 'e.g. +')}
+                {renderInputField('trust_stat1_lbl', 'Text Label', 'e.g. Years of Trust')}
+              </div>
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0' }}>Stat 2 (e.g. Investors Served)</h4>
+                {renderInputField('trust_stat2_num', 'Number Value', 'e.g. 400000')}
+                {renderInputField('trust_stat2_suffix', 'Suffix Symbol', 'e.g. +')}
+                {renderInputField('trust_stat2_lbl', 'Text Label', 'e.g. Investors Served')}
+              </div>
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0' }}>Stat 3 (e.g. Pan India Locations)</h4>
+                {renderInputField('trust_stat3_num', 'Number Value', 'e.g. 420')}
+                {renderInputField('trust_stat3_suffix', 'Suffix Symbol', 'e.g. +')}
+                {renderInputField('trust_stat3_lbl', 'Text Label', 'e.g. Pan India Locations')}
+              </div>
+              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h4 style={{ margin: '0 0 12px 0' }}>Stat 4 (e.g. States e-Gov)</h4>
+                {renderInputField('trust_stat4_num', 'Number Value', 'e.g. 22')}
+                {renderInputField('trust_stat4_suffix', 'Suffix Symbol', 'e.g. (blank)')}
+                {renderInputField('trust_stat4_lbl', 'Text Label', 'e.g. States (e-Gov)')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {subTab === 'why_webinars' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>💡 "Why Choose SCSL Webinars?" Details</h3>
+            {renderInputField('why_webinars_tag', 'Section Tagline', 'Investor Empowerment')}
+            {renderInputField('why_webinars_title', 'Section Heading', 'Why Choose SCSL Webinars?')}
+            {renderTextareaField('why_webinars_sub', 'Section Subheading', 2, 'Transform your understanding...')}
+            
+            <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
+            
+            <h4 style={{ margin: '0 0 12px 0', color: 'var(--navy)' }}>Card 1 (Why Watch SCSL Webinars?)</h4>
+            {renderInputField('why_card1_title', 'Card Title', 'Why Watch SCSL Webinars?')}
+            {renderInputField('why_card1_p1', 'Point 1')}
+            {renderInputField('why_card1_p2', 'Point 2')}
+            {renderInputField('why_card1_p3', 'Point 3')}
+
+            <h4 style={{ margin: '20px 0 12px 0', color: 'var(--navy)' }}>Card 2 (Why Register in Advance?)</h4>
+            {renderInputField('why_card2_title', 'Card Title', 'Why Register in Advance?')}
+            {renderInputField('why_card2_p1', 'Point 1')}
+            {renderInputField('why_card2_p2', 'Point 2')}
+            {renderInputField('why_card2_p3', 'Point 3')}
+
+            <h4 style={{ margin: '20px 0 12px 0', color: 'var(--navy)' }}>Card 3 (What is the Practical Use?)</h4>
+            {renderInputField('why_card3_title', 'Card Title', 'What is the Practical Use?')}
+            {renderInputField('why_card3_p1', 'Point 1')}
+            {renderInputField('why_card3_p2', 'Point 2')}
+            {renderInputField('why_card3_p3', 'Point 3')}
+          </div>
+        )}
+
+        {subTab === 'services' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>🛠 Services Card Configuration</h3>
+            {renderInputField('services_tag', 'Section Tagline', 'Our Expertise')}
+            {renderInputField('services_title', 'Section Main Heading', 'Comprehensive Financial Solutions')}
+            {renderTextareaField('services_sub', 'Section Description Subtext', 2, 'One platform. Every financial need...')}
+
+            <div style={{ margin: '20px 0', padding: '16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.92rem', color: '#0f172a' }}>Select Service Card to Edit:</span>
+              <select 
+                value={selectedServiceIndex} 
+                onChange={e => setSelectedServiceIndex(parseInt(e.target.value))} 
+                style={{ padding: '8px 14px', borderRadius: '8px', border: '1.5px solid #cbd5e1', outline: 'none', background: 'white', fontWeight: 600 }}
+              >
+                <option value={1}>Card 1 (Stock Broking)</option>
+                <option value={2}>Card 2 (Depository Services)</option>
+                <option value={3}>Card 3 (e-Governance)</option>
+                <option value={4}>Card 4 (Life Insurance)</option>
+                <option value={5}>Card 5 (NBFC Loan Services)</option>
+                <option value={6}>Card 6 (Investments)</option>
+              </select>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <h4 style={{ margin: 0, color: 'var(--navy)' }}>Service Card #{selectedServiceIndex} Details</h4>
+              {renderInputField(`svc${selectedServiceIndex}_title`, 'Card Title')}
+              {renderTextareaField(`svc${selectedServiceIndex}_desc`, 'Card Description', 3)}
+              {renderInputField(`svc${selectedServiceIndex}_f1`, 'Bullet Point 1')}
+              {renderInputField(`svc${selectedServiceIndex}_f2`, 'Bullet Point 2')}
+              {renderInputField(`svc${selectedServiceIndex}_f3`, 'Bullet Point 3')}
+              {renderInputField(`svc${selectedServiceIndex}_f4`, 'Bullet Point 4')}
+            </div>
           </div>
         )}
 
@@ -3807,15 +4030,15 @@ export default function App() {
         {page === 'home' && (
           <>
             <Hero cmsContent={cmsContent} onOpenAccountClick={() => setShowOpenAccount(true)} />
-            <TrustStatsBar />
-            <WhyWebinars />
-            <Services limit={3} />
+            <TrustStatsBar cmsContent={cmsContent} />
+            <WhyWebinars cmsContent={cmsContent} />
+            <Services limit={3} cmsContent={cmsContent} />
             <Testimonials />
             <FeedbackSection />
           </>
         )}
         {page === 'webinars' && <WebinarSchedule onRegisterClick={setRegisteringWebinar} />}
-        {page === 'services' && <Services />}
+        {page === 'services' && <Services cmsContent={cmsContent} />}
         {page === 'hub' && <ServicesHub />}
         {page === 'journey' && <Journey />}
         {page === 'about' && <About cmsContent={cmsContent} />}
