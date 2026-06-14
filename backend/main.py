@@ -871,6 +871,95 @@ async def live_news():
     return fallback
 
 
+@app.get("/api/live-news/{sno}")
+async def live_news_detail(sno: int):
+    # Check if fallback ID
+    if sno <= 5:
+        fallbacks_detail = {
+            1: {
+                "id": 1,
+                "heading": "Steel City Securities Limited Expands Demat Services Across India",
+                "caption": "SCSL announces opening of 50 new digital facilitation centers across Tier-2 and Tier-3 cities to support local retail investors.",
+                "date": "14 Jun 2026",
+                "time": "10:30",
+                "section": "Corporate News",
+                "arttext": "Steel City Securities Limited (SCSL), a pioneer in retail stockbroking and e-governance services, has announced a major retail demat expansion plan. The company will open 50 new digital facilitation centers across Tier-2 and Tier-3 cities over the next three quarters.<P>These centers will provide paperless instant onboarding for demat accounts, NPS registration, and insurance services. By leveraging advanced e-KYC and digital signing solutions, SCSL aims to make investment services accessible to millions of emerging investors in semi-urban areas.<P>The initiative is expected to drive customer acquisition by 25% and consolidate Steel City's leadership in regional markets. In addition, localized training sessions will be hosted at these centers to boost financial literacy and safe trading habits.",
+                "IllustrationImage": "https://www.capitalmarket.com/IImagesNew/Steelcity_logo.png"
+            },
+            2: {
+                "id": 2,
+                "heading": "Nifty 50 Hits Record High on Strong Foreign Institutional Inflows",
+                "caption": "NSE Nifty index records historic gains led by IT, Banking, and Reliance Industries shares amid global market optimism.",
+                "date": "14 Jun 2026",
+                "time": "09:45",
+                "section": "Market Commentary",
+                "arttext": "The benchmark NSE Nifty 50 index crossed historic thresholds today, closing at all-time highs led by aggressive institutional buying. Market analysts attribute this momentum to robust foreign portfolio investor (FPI) inflows and strong domestic mutual fund participation.<P>Heavyweights in the IT sector (such as TCS and Infosys) along with major banking names drove the upward charge. The positive earnings season and stable macroeconomic parameters released by the central bank have further fueled investor confidence.<P>Global markets also showed positive cues, with expectations of interest rate cuts by the US Federal Reserve supporting risk-on assets in emerging economies like India.",
+                "IllustrationImage": ""
+            },
+            3: {
+                "id": 3,
+                "heading": "SCSL Investor Awareness Web-Program Sees Record Registrations",
+                "caption": "Over 10,000 retail traders register for the upcoming Free Stock Market Training Program hosted by certified SCSL mentors.",
+                "date": "13 Jun 2026",
+                "time": "15:20",
+                "section": "Press Release",
+                "arttext": "Steel City Securities Limited's free stock market training program has witnessed record-breaking registrations. Over 10,000 retail traders and students from across India have registered for the upcoming three-day digital workshop.<P>The program, structured by senior market experts, covers topics ranging from basic demat operations and long-term asset allocation to advanced technical analysis and option trading strategies.<P>A company spokesperson stated: 'We believe financial education is the cornerstone of responsible investing. Our goal is to empower retail investors with institutional-grade knowledge so they can navigate market cycles confidently and safely.'",
+                "IllustrationImage": ""
+            },
+            4: {
+                "id": 4,
+                "heading": "SEBI Proposes New Guidelines to Simplify demat Account Opening",
+                "caption": "Market regulator SEBI releases consultation paper aiming to make the paperless demat onboarding process more secure and faster.",
+                "date": "12 Jun 2026",
+                "time": "16:45",
+                "section": "Regulatory News",
+                "arttext": "The Securities and Exchange Board of India (SEBI) has released a new consultation paper outlining steps to simplify and secure the demat account opening process.<P>The proposed guidelines suggest a standardized paperless onboarding workflow that incorporates facial recognition, geofencing, and AI-driven document verification to eliminate identity fraud and reduce onboarding times to under 5 minutes.<P>Industry players have welcomed the recommendations, noting that these measures will drastically reduce administrative costs and improve compliance across the brokerage ecosystem.",
+                "IllustrationImage": ""
+            },
+            5: {
+                "id": 5,
+                "heading": "Indian Rupee Stabilizes Against US Dollar as Crude Prices Ease",
+                "caption": "The INR gains strength as Brent crude prices contract slightly, providing relief to India's fiscal deficit and import bills.",
+                "date": "12 Jun 2026",
+                "time": "11:15",
+                "section": "Currency Market",
+                "arttext": "The Indian Rupee (INR) recorded solid gains against the US Dollar (USD), closing higher as international Brent crude prices fell below key levels. Lower crude prices directly benefit India's current account deficit and inflation outlook.<P>The Reserve Bank of India (RBI) was also reported to have intervened selectively to curb extreme volatility, ensuring stability for exporters and importers alike.<P>Treasury managers anticipate the rupee to trade in a tight, stable range in the coming weeks, supported by robust foreign exchange reserves and strong local economic growth projections.",
+                "IllustrationImage": ""
+            }
+        }
+        return fallbacks_detail.get(sno, {"error": "News not found"})
+
+    try:
+        url = f"https://api.capitalmarket.com/api/CmLiveNews/{sno}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+        with urllib.request.urlopen(req, timeout=4) as response:
+            res = json.loads(response.read().decode('utf-8'))
+            if res.get("success"):
+                raw_data = res.get("data", [])
+                if raw_data:
+                    # Find exact match or default to first
+                    item = raw_data[0]
+                    for x in raw_data:
+                        if x.get("SNO") == sno:
+                            item = x
+                            break
+                    return {
+                        "id": item.get("SNO"),
+                        "heading": item.get("Heading"),
+                        "caption": item.get("Caption"),
+                        "date": item.get("Date"),
+                        "time": item.get("Time"),
+                        "section": item.get("sectionname"),
+                        "arttext": item.get("arttext"),
+                        "IllustrationImage": item.get("IllustrationImage"),
+                        "KeyWords": item.get("KeyWords")
+                    }
+    except Exception as e:
+        print(f"Failed to fetch live news detail for {sno}:", e)
+    
+    return {"error": "Failed to retrieve story details. Please check your connection."}
+
+
 @app.post("/api/track/pageview")
 async def track_pageview(req_data: PageViewReq, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host

@@ -7,7 +7,7 @@ import {
   Landmark, Coins, PiggyBank, Calendar, Users, Video,
   Briefcase, Rocket, UserCheck, FileText, Laptop,
   CreditCard, Activity, Search, Network, GraduationCap,
-  Home, BookOpen, Shield, Newspaper, Clock
+  Home, BookOpen, Shield, Newspaper, Clock, RefreshCw
 } from 'lucide-react';
 import './App.css';
 
@@ -15,6 +15,81 @@ const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:8000' 
     : 'https://scsl-backend.onrender.com');
+
+/* ═══════════════════════════════════════════════
+   RELATIVE TIME UTILITIES
+   Formats dates and times to "X mins/hours ago"
+   ═══════════════════════════════════════════════ */
+const parseNewsDateTime = (dateStr, timeStr) => {
+  if (!dateStr) return new Date();
+  const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+  const parts = dateStr.split(' ');
+  let day = 1, month = 0, year = new Date().getFullYear();
+  if (parts.length === 3) {
+    day = parseInt(parts[0], 10);
+    month = months[parts[1]] || 0;
+    year = parseInt(parts[2], 10);
+  }
+  let hours = 0, minutes = 0;
+  if (timeStr) {
+    const timeParts = timeStr.split(':');
+    if (timeParts.length === 2) {
+      hours = parseInt(timeParts[0], 10);
+      minutes = parseInt(timeParts[1], 10);
+    }
+  }
+  return new Date(year, month, day, hours, minutes);
+};
+
+const getRelativeTime = (dateStr, timeStr) => {
+  try {
+    const newsDate = parseNewsDateTime(dateStr, timeStr);
+    const now = new Date();
+    const diffMs = now.getTime() - newsDate.getTime();
+    if (diffMs < 0) return 'just now';
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays === 1) return 'yesterday';
+    return `${diffDays}d ago`;
+  } catch (e) {
+    return timeStr ? `${timeStr} - ${dateStr}` : dateStr || '';
+  }
+};
+
+/* ═══════════════════════════════════════════════
+   NEWS TICKER (Auto-scrolling news channel style)
+   ═══════════════════════════════════════════════ */
+function NewsTicker({ items, onSelect }) {
+  if (!items || items.length === 0) return null;
+  const marqueeItems = [...items, ...items, ...items];
+  return (
+    <div className="news-ticker-bar">
+      <div className="news-ticker-label">
+        <span className="live-indicator-pulse"></span>
+        <span>BREAKING NEWS</span>
+      </div>
+      <div className="news-ticker-wrap">
+        <div className="news-ticker-inner">
+          {marqueeItems.map((item, idx) => (
+            <span 
+              key={`${item.id}-${idx}`} 
+              className="news-ticker-item" 
+              onClick={() => onSelect(item)}
+            >
+              <span className="ticker-sec-badge">{item.section || "Live"}</span>
+              <span className="ticker-headline">{item.heading}</span>
+              <span className="ticker-time-badge">{getRelativeTime(item.date, item.time)}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ═══════════════════════════════════════════════
    KEEP-ALIVE: Pings backend every 14 minutes to
@@ -715,31 +790,65 @@ function LiveNews({ isFullPage = false }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSection, setSelectedSection] = useState("All");
 
-  useEffect(() => {
-    const fetchNews = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/live-news`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data)) {
-            setNews(data);
-          } else {
-            console.error("News data is not an array:", data);
-          }
-        } else {
-          console.error("Failed to fetch news, status:", res.status);
-        }
-      } catch (err) {
-        console.error("Failed to fetch news:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [detailedNews, setDetailedNews] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
+  const fetchNews = async (showRefreshIndicator = false) => {
+    if (showRefreshIndicator) setRefreshing(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/live-news`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setNews(data);
+        } else {
+          console.error("News data is not an array:", data);
+        }
+      } else {
+        console.error("Failed to fetch news, status:", res.status);
+      }
+    } catch (err) {
+      console.error("Failed to fetch news:", err);
+    } finally {
+      setLoading(false);
+      if (showRefreshIndicator) setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     fetchNews();
-    const interval = setInterval(fetchNews, 60000);
+    const interval = setInterval(() => fetchNews(false), 60000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!selectedNews) {
+      setDetailedNews(null);
+      return;
+    }
+    const fetchDetail = async () => {
+      setLoadingDetail(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/live-news/${selectedNews.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDetailedNews(data);
+        } else {
+          console.error("Failed to fetch detail");
+        }
+      } catch (err) {
+        console.error("Error fetching detail:", err);
+      } finally {
+        setLoadingDetail(false);
+      }
+    };
+    fetchDetail();
+  }, [selectedNews]);
+
+  const handleManualRefresh = () => {
+    fetchNews(true);
+  };
 
   if (loading) {
     return (
@@ -798,7 +907,11 @@ function LiveNews({ isFullPage = false }) {
   if (isFullPage) {
     return (
       <section className="live-news-page-section">
-        <div className="container">
+        <div className="news-page-bg">
+          <div className="news-bg-bubble" style={{ width: '400px', height: '400px', top: '10%', right: '5%' }}></div>
+          <div className="news-bg-bubble" style={{ width: '300px', height: '300px', bottom: '20%', left: '5%', animationDelay: '-5s' }}></div>
+        </div>
+        <div className="container" style={{ position: 'relative', zIndex: 1 }}>
           <div className="section-header-center">
             <span className="live-news-tag">
               <span className="live-indicator-pulse"></span> LIVE BROADCAST
@@ -806,6 +919,8 @@ function LiveNews({ isFullPage = false }) {
             <h1 className="live-news-title">Pulse of the Financial Markets</h1>
             <p className="live-news-sub">Real-time market bulletins, IPO updates, corporate earnings, and key macroeconomic news updated continuously 24/7.</p>
           </div>
+
+          <NewsTicker items={news} onSelect={setSelectedNews} />
 
           <div className="news-filters-wrapper">
             <div className="news-search-box">
@@ -818,6 +933,16 @@ function LiveNews({ isFullPage = false }) {
               />
               {searchTerm && <button className="clear-search-btn" onClick={() => setSearchTerm("")}><X size={14} /></button>}
             </div>
+            
+            <button 
+              className={`refresh-news-btn ${refreshing ? 'spinning' : ''}`}
+              onClick={handleManualRefresh}
+              title="Refresh News Feed"
+              disabled={refreshing}
+            >
+              <RefreshCw size={18} />
+            </button>
+
             <div className="news-section-tabs">
               {sections.map(sec => (
                 <button 
@@ -850,8 +975,8 @@ function LiveNews({ isFullPage = false }) {
                 >
                   <div className="news-grid-card-header">
                     <span className="news-badge">{item.section || "Market Updates"}</span>
-                    <span className="news-time">
-                      <Clock size={12} /> {item.time} - {item.date}
+                    <span className="news-time" title={`${item.time} - ${item.date}`}>
+                      <Clock size={12} /> {getRelativeTime(item.date, item.time)}
                     </span>
                   </div>
                   <h3 className="news-grid-card-title">{item.heading}</h3>
@@ -873,6 +998,9 @@ function LiveNews({ isFullPage = false }) {
         <AnimatePresence>
           {selectedNews && (
             <div className="modal-overlay" onClick={() => setSelectedNews(null)}>
+              <div className="modal-bg-anim">
+                <div className="modal-bg-glow"></div>
+              </div>
               <motion.div 
                 className="news-detail-modal"
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -884,16 +1012,54 @@ function LiveNews({ isFullPage = false }) {
                   <X size={20} />
                 </button>
                 <div className="news-modal-header">
-                  <span className="news-badge">{selectedNews.section}</span>
+                  <span className="news-badge">{selectedNews.section || "Market Update"}</span>
                   <span className="news-modal-time">
                     <Calendar size={13} /> {selectedNews.date} at {selectedNews.time}
+                    <span className="news-modal-relative"> ({getRelativeTime(selectedNews.date, selectedNews.time)})</span>
                   </span>
                 </div>
                 <h2 className="news-modal-title">{selectedNews.heading}</h2>
                 <div className="news-modal-content-wrap">
-                  <p className="news-modal-caption">
-                    {selectedNews.caption || "No further details available for this bulletin."}
-                  </p>
+                  {loadingDetail ? (
+                    <div className="news-detail-skeleton">
+                      <div className="skeleton-line" style={{ width: '95%' }}></div>
+                      <div className="skeleton-line" style={{ width: '90%' }}></div>
+                      <div className="skeleton-line" style={{ width: '92%' }}></div>
+                      <div className="skeleton-line" style={{ width: '85%' }}></div>
+                      <div className="skeleton-line" style={{ width: '40%' }}></div>
+                    </div>
+                  ) : detailedNews && (detailedNews.arttext || detailedNews.caption) ? (
+                    <div className="news-detail-story">
+                      {detailedNews.IllustrationImage && (
+                        <div className="news-detail-img-wrap">
+                          <img src={detailedNews.IllustrationImage} alt={selectedNews.heading} className="news-detail-img" onError={(e) => e.target.style.display = 'none'} />
+                        </div>
+                      )}
+                      {detailedNews.arttext ? (
+                        detailedNews.arttext.split(/<P>|<p>/g).map((para, pIdx) => {
+                          const cleanPara = para.replace(/<\/p>|<\/P>/g, '').trim();
+                          if (!cleanPara) return null;
+                          return <p key={pIdx} className="news-detail-paragraph">{cleanPara}</p>;
+                        })
+                      ) : (
+                        <p className="news-detail-paragraph">{detailedNews.caption}</p>
+                      )}
+                      {detailedNews.KeyWords && (
+                        <div className="news-keywords-wrap">
+                          <span className="keywords-label">Keywords:</span>
+                          <div className="keywords-list">
+                            {detailedNews.KeyWords.split(',').map((kw, kwIdx) => (
+                              <span key={kwIdx} className="keyword-badge">{kw.trim()}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="news-modal-caption">
+                      {selectedNews.caption || "No further details available for this bulletin."}
+                    </p>
+                  )}
                 </div>
                 <div className="news-modal-footer">
                   <p className="news-modal-source">Source: Capital Market Publishers</p>
