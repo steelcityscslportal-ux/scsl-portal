@@ -232,28 +232,31 @@ function TrustStatsBar() {
 /* ═══════════════════════════════════════════════
    3. HERO SECTION (HOME PAGE ONLY)
    ═══════════════════════════════════════════════ */
-function Hero({ onOpenAccountClick }) {
+function Hero({ onOpenAccountClick, cmsContent = {} }) {
   const slides = [
     {
-      badge: "🎓 Absolutely Free Online Training",
-      title: "FREE STOCK MARKET TRAINING PROGRAM",
-      subtitle: "Exclusively For New Investors, Beginners & Aspiring Traders",
-      desc: "Learn the fundamentals of stock market investing, trading, technical analysis, risk management, and wealth creation from experienced market professionals.",
-      image: "/slide1.png"
+      badge: cmsContent.hero_slide1_badge || "🎓 Absolutely Free Online Training",
+      title: cmsContent.hero_slide1_title || "FREE STOCK MARKET TRAINING PROGRAM",
+      subtitle: cmsContent.hero_slide1_subtitle || "Exclusively For New Investors, Beginners & Aspiring Traders",
+      desc: cmsContent.hero_slide1_desc || "Learn the fundamentals of stock market investing, trading, technical analysis, risk management, and wealth creation from experienced market professionals.",
+      image: cmsContent.hero_slide1_image || "/slide1.png",
+      titleSize: cmsContent.hero_slide1_title_size || undefined
     },
     {
-      badge: "💻 Interactive Live Webinars",
-      title: "FREE LIVE INVESTOR AWARENESS MEETINGS",
-      subtitle: "Secure Your Seat For Real-Time Strategy Sessions",
-      desc: "Join live online sessions, interactive meetings, and live platform walkthroughs. Get all your doubts resolved in real-time.",
-      image: "/slide2.png"
+      badge: cmsContent.hero_slide2_badge || "💻 Interactive Live Webinars",
+      title: cmsContent.hero_slide2_title || "FREE LIVE INVESTOR AWARENESS MEETINGS",
+      subtitle: cmsContent.hero_slide2_subtitle || "Secure Your Seat For Real-Time Strategy Sessions",
+      desc: cmsContent.hero_slide2_desc || "Join live online sessions, interactive meetings, and live platform walkthroughs. Get all your doubts resolved in real-time.",
+      image: cmsContent.hero_slide2_image || "/slide2.png",
+      titleSize: cmsContent.hero_slide2_title_size || undefined
     },
     {
-      badge: "🏆 Expert Research Advisors",
-      title: "LEARN FROM SKILLED MARKET MENTORS",
-      subtitle: "Direct Guidance from SEBI Registered Research Analysts",
-      desc: "Get trained by seasoned advisors who guide you step-by-step through technical indicators, trading charts, and disciplined investing habits.",
-      image: "/slide3.png"
+      badge: cmsContent.hero_slide3_badge || "🏆 Expert Research Advisors",
+      title: cmsContent.hero_slide3_title || "LEARN FROM SKILLED MARKET MENTORS",
+      subtitle: cmsContent.hero_slide3_subtitle || "Direct Guidance from SEBI Registered Research Analysts",
+      desc: cmsContent.hero_slide3_desc || "Get trained by seasoned advisors who guide you step-by-step through technical indicators, trading charts, and disciplined investing habits.",
+      image: cmsContent.hero_slide3_image || "/slide3.png",
+      titleSize: cmsContent.hero_slide3_title_size || undefined
     }
   ];
 
@@ -306,7 +309,7 @@ function Hero({ onOpenAccountClick }) {
                 >
                   <div className="slide-content">
                     <div className="slide-badge"><span className="badge-dot" />{slides[slideIndex].badge}</div>
-                    <h2 className="slide-title">
+                    <h2 className="slide-title" style={slides[slideIndex].titleSize ? { fontSize: slides[slideIndex].titleSize } : undefined}>
                       {slides[slideIndex].title}
                     </h2>
                     <p className="slide-subtitle">
@@ -344,11 +347,11 @@ function Hero({ onOpenAccountClick }) {
 
           <motion.div className="hero-visual" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.9, delay: 0.2 }}>
             <div className="ceo-float-card">
-              <div className="ceo-img-wrap"><img src="/ceo.png" alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
+              <div className="ceo-img-wrap"><img src={cmsContent.ceo_image || "/ceo.png"} alt="Satish Kumar Arya – MD & CEO, SCSL" /></div>
               <div className="ceo-details">
-                <p className="ceo-name">Satish Kumar Arya</p>
-                <p className="ceo-title">Managing Director & CEO</p>
-                <p className="ceo-quote">"Building wealth, building trust — for every Indian investor."</p>
+                <p className="ceo-name">{cmsContent.ceo_name || "Satish Kumar Arya"}</p>
+                <p className="ceo-title">{cmsContent.ceo_title || "Managing Director & CEO"}</p>
+                <p className="ceo-quote">{cmsContent.ceo_quote || '"Building wealth, building trust — for every Indian investor."'}</p>
               </div>
             </div>
           </motion.div>
@@ -1053,16 +1056,26 @@ function Journey() {
 /* ═══════════════════════════════════════════════
    8. ABOUT / LEADERSHIP PAGE
    ═══════════════════════════════════════════════ */
-function About() {
+function About({ cmsContent = {} }) {
+  const tag = cmsContent.about_tag || "Our Story";
+  const title = cmsContent.about_title || "Three Decades of Trusted Financial Leadership";
+  const p1 = cmsContent.about_text_p1 || "Founded in 1995 by Kamireddy Satyanarayana, Steel City Securities Limited began with a singular mission: to make Indian capital markets accessible, transparent, and investor-friendly. Today, with over 31 years of industry presence, SCSL stands as a comprehensive financial powerhouse.";
+  const p2 = cmsContent.about_text_p2 || "Listed on NSE and MSEI, and proudly holding ISO 9001:2015 certification, our working culture is built on \"Dedication & Trustworthiness\" — the two pillars that define every interaction.";
+  const quote = cmsContent.about_quote || "\"Do Good to Do Well, and Do Well to Do Good.\"";
+  const cite = cmsContent.about_quote_cite || "— SCSL Corporate Philosophy";
+  const vision = cmsContent.about_vision || "Towards making the Indian Securities Market — Transparent, Efficient, and Investor Friendly.";
+  const mission = cmsContent.about_mission || "To hold securities in dematerialised form and provide safe, reliable and efficient depository services.";
+  const titleSize = cmsContent.about_title_size || undefined;
+
   return (
     <section className="about-section">
       <div className="container about-grid">
         <motion.div className="about-text" initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
-          <span className="section-tag">Our Story</span>
-          <h2 className="section-title">Three Decades of<br />Trusted Financial Leadership</h2>
-          <p>Founded in <strong>1995</strong> by Kamireddy Satyanarayana, Steel City Securities Limited began with a singular mission: to make Indian capital markets accessible, transparent, and investor-friendly. Today, with over <strong>31 years of industry presence</strong>, SCSL stands as a comprehensive financial powerhouse.</p>
-          <p style={{ marginTop: '1rem' }}>Listed on <strong>NSE and MSEI</strong>, and proudly holding <strong>ISO 9001:2015</strong> certification, our working culture is built on "Dedication & Trustworthiness" — the two pillars that define every interaction.</p>
-          <blockquote className="about-quote">"Do Good to Do Well, and Do Well to Do Good."<cite>— SCSL Corporate Philosophy</cite></blockquote>
+          <span className="section-tag">{tag}</span>
+          <h2 className="section-title" style={titleSize ? { fontSize: titleSize } : undefined} dangerouslySetInnerHTML={{ __html: title.replace(/\n/g, '<br />') }} />
+          <p dangerouslySetInnerHTML={{ __html: p1 }} />
+          <p style={{ marginTop: '1rem' }} dangerouslySetInnerHTML={{ __html: p2 }} />
+          <blockquote className="about-quote">{quote}<cite>{cite}</cite></blockquote>
           <div className="leadership-cards">
             <div className="leader-card">
               <div className="leader-avatar">KS</div>
@@ -1070,14 +1083,14 @@ function About() {
             </div>
             <div className="leader-card">
               <div className="leader-avatar">SA</div>
-              <div><p className="leader-name">Satish Kumar Arya</p><p className="leader-role">Managing Director & CEO</p></div>
+              <div><p className="leader-name">{cmsContent.ceo_name || "Satish Kumar Arya"}</p><p className="leader-role">{cmsContent.ceo_role || "Managing Director & CEO"}</p></div>
             </div>
           </div>
         </motion.div>
         <motion.div className="about-visual" initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.2 }}>
           <div className="vision-board">
-            <div className="vision-item"><h4>Our Vision</h4><p>Towards making the Indian Securities Market — Transparent, Efficient, and Investor Friendly.</p></div>
-            <div className="vision-item"><h4>Our Mission</h4><p>To hold securities in dematerialised form and provide safe, reliable and efficient depository services.</p></div>
+            <div className="vision-item"><h4>Our Vision</h4><p>{vision}</p></div>
+            <div className="vision-item"><h4>Our Mission</h4><p>{mission}</p></div>
             <div className="trust-logos">
               <p className="trust-title">Registered & Regulated by</p>
               <div className="trust-grid">{['SEBI', 'PFRDA', 'RBI', 'NSDL', 'CDSL', 'MCX', 'NSE', 'BSE'].map(b => <div key={b} className="trust-badge">{b}</div>)}</div>
@@ -1641,7 +1654,7 @@ function InvestorCharter({ onBackClick }) {
 /* ═══════════════════════════════════════════════
    10. CONTACT PAGE
    ═══════════════════════════════════════════════ */
-function Contact() {
+function Contact({ cmsContent = {} }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', message: '' });
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -1670,17 +1683,24 @@ function Contact() {
     }
   };
 
+  const contactTag = cmsContent.contact_tag || "Get in Touch";
+  const contactTitle = cmsContent.contact_title || "Start Your Journey with SCSL Today";
+  const contactText = cmsContent.contact_text || "Whether you want to open a trading account, become a franchise partner, or need support — our team is ready.";
+  const contactAddress = cmsContent.contact_address || "Steel City Heights, 50-81-18, Seethammapeta Main Road, Visakhapatnam, AP – 530016";
+  const contactPhone = cmsContent.contact_phone || "+91 0891-2563581 / 6770222 / 3010969";
+  const contactEmail = cmsContent.contact_email || "scsl@steelcitynettrade.com / helpdesk@steelcitynettrade.com";
+
   return (
     <section className="contact-section">
       <div className="container contact-grid">
         <motion.div className="contact-info" initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
-          <span className="section-tag">Get in Touch</span>
-          <h2 className="section-title">Start Your Journey<br />with SCSL Today</h2>
-          <p>Whether you want to open a trading account, become a franchise partner, or need support — our team is ready.</p>
+          <span className="section-tag">{contactTag}</span>
+          <h2 className="section-title" style={cmsContent.contact_title_size ? { fontSize: cmsContent.contact_title_size } : undefined}>{contactTitle}</h2>
+          <p>{contactText}</p>
           <div className="contact-details">
-            <div className="cinfo-row"><MapPin size={20} color="#0077B6" /><div><strong>Head Office</strong><br />Steel City Heights, 50-81-18, Seethammapeta Main Road,<br />Visakhapatnam, AP – 530016</div></div>
-            <div className="cinfo-row"><PhoneCall size={20} color="#0077B6" /><div><strong>Helpline</strong><br />+91 0891-2563581 / 6770222 / 3010969</div></div>
-            <div className="cinfo-row"><Mail size={20} color="#0077B6" /><div><strong>Email Support</strong><br />scsl@steelcitynettrade.com<br />helpdesk@steelcitynettrade.com</div></div>
+            <div className="cinfo-row"><MapPin size={20} color="#0077B6" /><div><strong>Head Office</strong><br />{contactAddress}</div></div>
+            <div className="cinfo-row"><PhoneCall size={20} color="#0077B6" /><div><strong>Helpline</strong><br />{contactPhone}</div></div>
+            <div className="cinfo-row"><Mail size={20} color="#0077B6" /><div><strong>Email Support</strong><br />{contactEmail}</div></div>
           </div>
         </motion.div>
         <motion.form className="contact-form" onSubmit={handleSubmit} initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.7, delay: 0.2 }}>
@@ -2334,9 +2354,238 @@ function SystemSettingsTab({ authHeader }) {
 }
 
 /* ═══════════════════════════════════════════════
+   11c. HOMEPAGE CMS TAB (Admin Sub-Component)
+   ═══════════════════════════════════════════════ */
+function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
+  const [subTab, setSubTab] = useState('hero1'); // 'hero1', 'hero2', 'hero3', 'ceo', 'about', 'contact'
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  useEffect(() => {
+    const initialValues = {};
+    const keys = [
+      'hero_slide1_badge', 'hero_slide1_title', 'hero_slide1_title_size', 'hero_slide1_subtitle', 'hero_slide1_desc', 'hero_slide1_image',
+      'hero_slide2_badge', 'hero_slide2_title', 'hero_slide2_title_size', 'hero_slide2_subtitle', 'hero_slide2_desc', 'hero_slide2_image',
+      'hero_slide3_badge', 'hero_slide3_title', 'hero_slide3_title_size', 'hero_slide3_subtitle', 'hero_slide3_desc', 'hero_slide3_image',
+      'ceo_name', 'ceo_title', 'ceo_quote', 'ceo_image',
+      'about_tag', 'about_title', 'about_title_size', 'about_text_p1', 'about_text_p2', 'about_quote', 'about_quote_cite', 'about_vision', 'about_mission',
+      'contact_tag', 'contact_title', 'contact_title_size', 'contact_text', 'contact_address', 'contact_phone', 'contact_email'
+    ];
+    keys.forEach(k => {
+      initialValues[k] = cmsContent[k] || '';
+    });
+    setForm(initialValues);
+  }, [cmsContent]);
+
+  const handleChange = (key, val) => {
+    setForm(prev => ({ ...prev, [key]: val }));
+  };
+
+  const handleImageUpload = (e, key) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2.5 * 1024 * 1024) {
+      alert("Image size should be less than 2.5MB to ensure fast loading.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      handleChange(key, reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/homepage-content`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader
+        },
+        body: JSON.stringify({ content: form })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSaveMsg('✅ Homepage content updated successfully!');
+        if (onCMSUpdate) await onCMSUpdate();
+      } else {
+        setSaveMsg('❌ Error: ' + (data.detail || 'Failed to save changes'));
+      }
+    } catch (err) {
+      console.error(err);
+      setSaveMsg('❌ Network error saving CMS data.');
+    } finally {
+      setSaving(false);
+      setTimeout(() => setSaveMsg(''), 4000);
+    }
+  };
+
+  const renderInputField = (key, label, placeholder = '') => (
+    <div className="cms-form-group">
+      <label>{label}</label>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={form[key] || ''}
+        onChange={e => handleChange(key, e.target.value)}
+      />
+    </div>
+  );
+
+  const renderTextareaField = (key, label, rows = 3, placeholder = '') => (
+    <div className="cms-form-group">
+      <label>{label}</label>
+      <textarea
+        rows={rows}
+        placeholder={placeholder}
+        value={form[key] || ''}
+        onChange={e => handleChange(key, e.target.value)}
+      />
+    </div>
+  );
+
+  const renderImageField = (key, label, defaultFallback) => {
+    const currentSrc = form[key] || defaultFallback;
+    return (
+      <div className="cms-form-group">
+        <label>{label}</label>
+        <div className="cms-image-upload-wrap">
+          <img src={currentSrc} alt="Preview" className="cms-image-preview" />
+          <div className="cms-image-upload-btn-wrap">
+            <label htmlFor={`file-${key}`} className="cms-image-upload-label">
+              Choose Image File
+            </label>
+            <input
+              id={`file-${key}`}
+              type="file"
+              accept="image/*"
+              className="cms-image-upload-input"
+              onChange={e => handleImageUpload(e, key)}
+            />
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              Base64 format. Max 2.5MB.
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="cms-editor-container">
+      <div className="cms-sidebar">
+        <h4 style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Homepage Sections</h4>
+        <button className={`cms-sidebar-btn ${subTab === 'hero1' ? 'active' : ''}`} onClick={() => setSubTab('hero1')}>🔥 Hero Slide 1</button>
+        <button className={`cms-sidebar-btn ${subTab === 'hero2' ? 'active' : ''}`} onClick={() => setSubTab('hero2')}>📢 Hero Slide 2</button>
+        <button className={`cms-sidebar-btn ${subTab === 'hero3' ? 'active' : ''}`} onClick={() => setSubTab('hero3')}>🏆 Hero Slide 3</button>
+        <button className={`cms-sidebar-btn ${subTab === 'ceo' ? 'active' : ''}`} onClick={() => setSubTab('ceo')}>💼 CEO Details</button>
+        <button className={`cms-sidebar-btn ${subTab === 'about' ? 'active' : ''}`} onClick={() => setSubTab('about')}>📖 About Section</button>
+        <button className={`cms-sidebar-btn ${subTab === 'contact' ? 'active' : ''}`} onClick={() => setSubTab('contact')}>📞 Contact Details</button>
+      </div>
+
+      <div className="cms-content-area">
+        {subTab === 'hero1' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>Hero Slide 1 Configuration</h3>
+            {renderInputField('hero_slide1_badge', 'Badge Text', 'e.g. 🎓 Absolutely Free Online Training')}
+            {renderTextareaField('hero_slide1_title', 'Main Title', 2, 'e.g. FREE STOCK MARKET TRAINING PROGRAM')}
+            {renderInputField('hero_slide1_title_size', 'Title Font Size (CSS format)', 'e.g. 2.8rem or 42px (leave blank for default)')}
+            {renderInputField('hero_slide1_subtitle', 'Sub-heading', 'Exclusively For New Investors...')}
+            {renderTextareaField('hero_slide1_desc', 'Description Paragraph', 3)}
+            {renderImageField('hero_slide1_image', 'Slide Image', '/slide1.png')}
+          </div>
+        )}
+
+        {subTab === 'hero2' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>Hero Slide 2 Configuration</h3>
+            {renderInputField('hero_slide2_badge', 'Badge Text', 'e.g. 💻 Interactive Live Webinars')}
+            {renderTextareaField('hero_slide2_title', 'Main Title', 2)}
+            {renderInputField('hero_slide2_title_size', 'Title Font Size (CSS format)', 'e.g. 2.8rem (leave blank for default)')}
+            {renderInputField('hero_slide2_subtitle', 'Sub-heading')}
+            {renderTextareaField('hero_slide2_desc', 'Description Paragraph', 3)}
+            {renderImageField('hero_slide2_image', 'Slide Image', '/slide2.png')}
+          </div>
+        )}
+
+        {subTab === 'hero3' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>Hero Slide 3 Configuration</h3>
+            {renderInputField('hero_slide3_badge', 'Badge Text', 'e.g. 🏆 Expert Research Advisors')}
+            {renderTextareaField('hero_slide3_title', 'Main Title', 2)}
+            {renderInputField('hero_slide3_title_size', 'Title Font Size (CSS format)', 'e.g. 2.8rem (leave blank for default)')}
+            {renderInputField('hero_slide3_subtitle', 'Sub-heading')}
+            {renderTextareaField('hero_slide3_desc', 'Description Paragraph', 3)}
+            {renderImageField('hero_slide3_image', 'Slide Image', '/slide3.png')}
+          </div>
+        )}
+
+        {subTab === 'ceo' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>Managing Director & CEO Details</h3>
+            {renderInputField('ceo_name', 'CEO Full Name', 'Satish Kumar Arya')}
+            {renderInputField('ceo_title', 'CEO Title / Position', 'Managing Director & CEO')}
+            {renderTextareaField('ceo_quote', 'CEO Quote / Message', 3, '"Building wealth, building trust..."')}
+            {renderImageField('ceo_image', 'CEO Card Photo', '/ceo.png')}
+          </div>
+        )}
+
+        {subTab === 'about' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>About Us Section Configuration</h3>
+            {renderInputField('about_tag', 'Section Tagline', 'Our Story')}
+            {renderInputField('about_title', 'Section Main Heading', 'Three Decades of Trusted Financial Leadership')}
+            {renderInputField('about_title_size', 'Heading Font Size', 'e.g. 2.5rem')}
+            {renderTextareaField('about_text_p1', 'First Paragraph', 4)}
+            {renderTextareaField('about_text_p2', 'Second Paragraph', 4)}
+            {renderTextareaField('about_quote', 'Highlighted Quote box', 3)}
+            {renderInputField('about_quote_cite', 'Quote citation author', '- SCSL Corporate Philosophy')}
+            {renderTextareaField('about_vision', 'Our Vision Paragraph', 3)}
+            {renderTextareaField('about_mission', 'Our Mission Paragraph', 3)}
+          </div>
+        )}
+
+        {subTab === 'contact' && (
+          <div className="cms-form-section">
+            <h3 style={{ margin: '0 0 10px 0', color: 'var(--navy)' }}>Contact Details & Location</h3>
+            {renderInputField('contact_tag', 'Section Tagline', 'Get in Touch')}
+            {renderInputField('contact_title', 'Section Heading', 'Start Your Journey with SCSL Today')}
+            {renderInputField('contact_title_size', 'Heading Font Size', 'e.g. 2.5rem')}
+            {renderTextareaField('contact_text', 'Section Paragraph Text', 3)}
+            {renderTextareaField('contact_address', 'Corporate Head Office Address', 3)}
+            {renderInputField('contact_phone', 'Helpline Numbers (slash separated)', '+91 0891-2563581 / 6770222')}
+            {renderInputField('contact_email', 'Support Email Addresses (slash separated)', 'scsl@steelcitynettrade.com')}
+          </div>
+        )}
+
+        <div className="cms-save-bar">
+          {saveMsg && (
+            <span style={{ fontWeight: 600, marginRight: '10px', color: saveMsg.startsWith('✅') ? '#16a34a' : '#dc2626' }}>
+              {saveMsg}
+            </span>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-solid"
+            style={{ border: 'none', cursor: 'pointer', padding: '12px 28px', fontSize: '0.95rem' }}
+          >
+            {saving ? 'Saving changes...' : '💾 Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
-function LeadsAdminPage() {
+function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!sessionStorage.getItem('scsl_admin_auth'));
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -2806,6 +3055,9 @@ function LeadsAdminPage() {
             <button className={`admin-tab ${activeTab === 'feedbacks' ? 'active' : ''}`} onClick={() => setActiveTab('feedbacks')}>
               Reviews ({filteredFeedbacks.length})
             </button>
+            <button className={`admin-tab ${activeTab === 'cms' ? 'active' : ''}`} onClick={() => setActiveTab('cms')}>
+              ✏️ Edit Homepage
+            </button>
             {adminRole === 'admin' && (
               <>
                 <button className={`admin-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => setActiveTab('admins')}>
@@ -3008,6 +3260,8 @@ function LeadsAdminPage() {
           <AdminUsersTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} />
         ) : activeTab === 'settings' ? (
           <SystemSettingsTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} />
+        ) : activeTab === 'cms' ? (
+          <HomepageCMSTab authHeader={sessionStorage.getItem('scsl_admin_auth') || ''} cmsContent={cmsContent} onCMSUpdate={onCMSUpdate} />
         ) : null}
 
         {activeTab === 'analytics' && (
@@ -3386,6 +3640,52 @@ function OpenAccountModal({ onClose }) {
 }
 
 /* ═══════════════════════════════════════════════
+   12b. REGULATORY NOTICE BAR (Sticky Footer)
+   ═══════════════════════════════════════════════ */
+function RegulatoryNoticeBar() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const isClosed = localStorage.getItem('scsl_notice_closed');
+    if (isClosed !== 'true') {
+      const t = setTimeout(() => setVisible(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const handleClose = () => {
+    localStorage.setItem('scsl_notice_closed', 'true');
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <motion.div 
+      className="regulatory-notice-bar"
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      transition={{ duration: 0.5, type: 'spring' }}
+    >
+      <div className="notice-bar-content">
+        <div className="notice-bar-text">
+          ⚠️ <strong>SEBI Regulatory Notice:</strong> Investment in securities market are subject to market risks, read all the related documents carefully before investing. | Steel City Securities Limited. SEBI Registration No: INZ000216330, Member: NSE & BSE, DP: CDSL, ISO 9001:2015 Certified.
+        </div>
+        <div className="notice-bar-links">
+          <a href="#privacy" className="notice-bar-link">Privacy Policy</a>
+          <a href="#disclaimer" className="notice-bar-link">Disclaimer</a>
+          <a href="#investor-charter" className="notice-bar-link">Investor Charter</a>
+        </div>
+        <button className="notice-bar-close" onClick={handleClose} aria-label="Close Notice Banner">
+          <X size={18} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    13. FOOTER
    ═══════════════════════════════════════════════ */
 function Footer() {
@@ -3439,6 +3739,28 @@ export default function App() {
     const hash = window.location.hash.replace('#', '');
     return ['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash) ? hash : 'home';
   });
+
+  const [cmsContent, setCmsContent] = useState({});
+  const [fetchingCMS, setFetchingCMS] = useState(false);
+
+  const fetchCMS = async () => {
+    setFetchingCMS(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/homepage-content`);
+      if (res.ok) {
+        const data = await res.json();
+        setCmsContent(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch CMS content:", err);
+    } finally {
+      setFetchingCMS(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCMS();
+  }, []);
   
   const [registeringWebinar, setRegisteringWebinar] = useState(null);
 
@@ -3484,7 +3806,7 @@ export default function App() {
       <main className="main-content">
         {page === 'home' && (
           <>
-            <Hero onOpenAccountClick={() => setShowOpenAccount(true)} />
+            <Hero cmsContent={cmsContent} onOpenAccountClick={() => setShowOpenAccount(true)} />
             <TrustStatsBar />
             <WhyWebinars />
             <Services limit={3} />
@@ -3496,9 +3818,9 @@ export default function App() {
         {page === 'services' && <Services />}
         {page === 'hub' && <ServicesHub />}
         {page === 'journey' && <Journey />}
-        {page === 'about' && <About />}
-        {page === 'contact' && <Contact />}
-        {page === 'leads' && <LeadsAdminPage />}
+        {page === 'about' && <About cmsContent={cmsContent} />}
+        {page === 'contact' && <Contact cmsContent={cmsContent} />}
+        {page === 'leads' && <LeadsAdminPage cmsContent={cmsContent} onCMSUpdate={fetchCMS} />}
         {page === 'privacy' && <PrivacyPolicy onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
         {page === 'disclaimer' && <Disclaimer onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
         {page === 'investor-charter' && <InvestorCharter onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
@@ -3519,6 +3841,7 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+      <RegulatoryNoticeBar />
     </>
   );
 }

@@ -17,7 +17,7 @@ import hashlib
 import datetime
 import asyncio
 from sqlalchemy.orm import Session
-from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback, AdminUser, SystemSetting
+from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback, AdminUser, SystemSetting, HomepageContent
 from user_agents import parse
 
 app = FastAPI(title="SCSL Portal API", version="1.0.0")
@@ -929,6 +929,29 @@ async def approve_payment(req: ApprovePaymentReq, background_tasks: BackgroundTa
         print(f"[APPROVE PAYMENT EMAIL] Failed to queue confirmation email to {reg.email}: {e}")
         
     return {"success": True, "message": f"Payment approved and confirmation email queued for {reg.email}."}
+
+# ─── Homepage CMS Routes ──────────────────────────
+class SaveHomepageReq(BaseModel):
+    content: dict
+
+@app.get("/api/homepage-content")
+async def get_homepage_content(db: Session = Depends(get_db)):
+    items = db.query(HomepageContent).all()
+    return {item.key: item.value for item in items}
+
+@app.post("/api/admin/homepage-content")
+async def save_homepage_content(req: SaveHomepageReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    for k, v in req.content.items():
+        if v is None:
+            v = ""
+        item = db.query(HomepageContent).filter(HomepageContent.key == k).first()
+        if item:
+            item.value = str(v)
+        else:
+            item = HomepageContent(key=k, value=str(v))
+            db.add(item)
+    db.commit()
+    return {"success": True, "message": "Homepage content updated successfully."}
 
 # ─── System Settings Routes ─────────────────────────
 class SettingUpdateReq(BaseModel):

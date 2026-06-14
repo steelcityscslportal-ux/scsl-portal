@@ -117,6 +117,12 @@ class SystemSetting(Base):
     key = Column(String, unique=True, index=True)
     value = Column(String)
 
+class HomepageContent(Base):
+    __tablename__ = "homepage_contents"
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, unique=True, index=True)
+    value = Column(Text)
+
 Base.metadata.create_all(bind=engine)
 
 def run_migrations():
