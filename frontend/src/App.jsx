@@ -760,7 +760,29 @@ function LiveNews({ isFullPage = false }) {
     );
   }
 
-  if (news.length === 0) return null;
+  if (news.length === 0) {
+    if (isFullPage) {
+      return (
+        <section className="live-news-page-section">
+          <div className="container" style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <span className="live-news-tag">
+              <span className="live-indicator-pulse"></span> SYSTEM ERROR
+            </span>
+            <h2 className="live-news-title" style={{ marginTop: '20px' }}>Unable to load live market news</h2>
+            <p className="live-news-sub">We could not fetch the latest market bulletins. Please verify your connection or try again shortly.</p>
+            <button 
+              className="btn-solid" 
+              onClick={() => window.location.reload()} 
+              style={{ marginTop: '30px', padding: '12px 30px', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+            >
+              Retry Connection
+            </button>
+          </div>
+        </section>
+      );
+    }
+    return null;
+  }
 
   // Filter logic for full page
   const filteredNews = news.filter(item => {
@@ -818,6 +840,7 @@ function LiveNews({ isFullPage = false }) {
             <div className="news-grid-layout">
               {filteredNews.map((item, idx) => (
                 <motion.div 
+                  layout
                   key={item.id} 
                   className="news-grid-card"
                   initial={{ opacity: 0, y: 30 }}
@@ -4178,7 +4201,7 @@ function Footer() {
           <p>Your trusted financial partner since 1995. NSE & MSEI listed. ISO 9001:2015 certified.</p>
           <div className="footer-socials"><a href="#" className="fsoc">f</a><a href="#" className="fsoc">in</a><a href="#" className="fsoc">t</a><a href="#" className="fsoc">yt</a></div>
         </div>
-        <div className="footer-col"><h5>Quick Links</h5><ul><li><a href="#home">Home</a></li><li><a href="#webinars">Webinars</a></li><li><a href="#services">Services</a></li><li><a href="#journey">Journey</a></li><li><a href="#about">About Us</a></li><li><a href="#contact">Contact</a></li></ul></div>
+        <div className="footer-col"><h5>Quick Links</h5><ul><li><a href="#home">Home</a></li><li><a href="#news">Live News</a></li><li><a href="#webinars">Webinars</a></li><li><a href="#services">Services</a></li><li><a href="#journey">Journey</a></li><li><a href="#about">About Us</a></li><li><a href="#contact">Contact</a></li></ul></div>
         <div className="footer-col"><h5>Services</h5><ul><li><a href="#services">Stock Broking</a></li><li><a href="#services">e-Governance / PAN</a></li><li><a href="#services">Depository (DP)</a></li><li><a href="#services">NBFC Loans</a></li><li><a href="#services">NPS & Insurance</a></li></ul></div>
         <div className="footer-col"><h5>Contact</h5><ul><li>Steel City Heights, Vizag</li><li>+91 0891-2563581</li><li>scsl@steelcitynettrade.com</li><li>Mon–Sat: 09:00 – 18:00</li></ul></div>
       </div>
@@ -4216,7 +4239,7 @@ export default function App() {
   useKeepAlive();
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '');
-    return ['home', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads'].includes(hash) ? hash : 'home';
+    return ['home', 'news', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash) ? hash : 'home';
   });
 
   const [cmsContent, setCmsContent] = useState({});
