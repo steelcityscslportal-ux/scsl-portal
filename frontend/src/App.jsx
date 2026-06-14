@@ -110,6 +110,7 @@ function MarketTicker() {
    ═══════════════════════════════════════════════ */
 const navItems = [
   { label: 'Home', href: '#home' },
+  { label: 'Live News', href: '#news' },
   { label: 'Webinars', href: '#webinars' },
   { label: 'Services', href: '#services' },
   { label: 'Services Hub', href: '#hub' },
@@ -707,10 +708,12 @@ function ServiceCard({ svc, idx }) {
 /* ═══════════════════════════════════════════════
    LIVE NEWS SECTION (Real-time data from CM API)
    ═══════════════════════════════════════════════ */
-function LiveNews() {
+function LiveNews({ isFullPage = false }) {
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedNews, setSelectedNews] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSection, setSelectedSection] = useState("All");
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -740,7 +743,7 @@ function LiveNews() {
 
   if (loading) {
     return (
-      <section className="live-news-section">
+      <section className={isFullPage ? "live-news-page-loading" : "live-news-section"}>
         <div className="container">
           <div className="section-header-center">
             <span className="live-news-tag">
@@ -757,7 +760,129 @@ function LiveNews() {
     );
   }
 
-  if (!Array.isArray(news) || news.length === 0) return null;
+  if (news.length === 0) return null;
+
+  // Filter logic for full page
+  const filteredNews = news.filter(item => {
+    const matchesSearch = 
+      (item.heading && item.heading.toLowerCase().includes(searchTerm.toLowerCase())) || 
+      (item.caption && item.caption.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesSection = selectedSection === "All" || item.section === selectedSection;
+    return matchesSearch && matchesSection;
+  });
+
+  const sections = ["All", ...new Set(news.map(item => item.section).filter(Boolean))];
+
+  if (isFullPage) {
+    return (
+      <section className="live-news-page-section">
+        <div className="container">
+          <div className="section-header-center">
+            <span className="live-news-tag">
+              <span className="live-indicator-pulse"></span> LIVE BROADCAST
+            </span>
+            <h1 className="live-news-title">Pulse of the Financial Markets</h1>
+            <p className="live-news-sub">Real-time market bulletins, IPO updates, corporate earnings, and key macroeconomic news updated continuously 24/7.</p>
+          </div>
+
+          <div className="news-filters-wrapper">
+            <div className="news-search-box">
+              <Search size={18} />
+              <input 
+                type="text" 
+                placeholder="Search headlines or descriptions..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && <button className="clear-search-btn" onClick={() => setSearchTerm("")}><X size={14} /></button>}
+            </div>
+            <div className="news-section-tabs">
+              {sections.map(sec => (
+                <button 
+                  key={sec} 
+                  className={`news-tab-btn ${selectedSection === sec ? 'active' : ''}`}
+                  onClick={() => setSelectedSection(sec)}
+                >
+                  {sec}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredNews.length === 0 ? (
+            <div className="no-news-found">
+              <p>No news bulletins found matching your criteria.</p>
+              <button className="btn-secondary" onClick={() => { setSearchTerm(""); setSelectedSection("All"); }}>Reset Filters</button>
+            </div>
+          ) : (
+            <div className="news-grid-layout">
+              {filteredNews.map(item => (
+                <motion.div 
+                  key={item.id} 
+                  className="news-grid-card"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -6, boxShadow: '0 20px 35px rgba(0, 119, 182, 0.08)' }}
+                >
+                  <div className="news-grid-card-header">
+                    <span className="news-badge">{item.section || "Market Updates"}</span>
+                    <span className="news-time">
+                      <Clock size={12} /> {item.time} - {item.date}
+                    </span>
+                  </div>
+                  <h3 className="news-grid-card-title">{item.heading}</h3>
+                  <p className="news-grid-card-excerpt">
+                    {item.caption ? (item.caption.length > 180 ? `${item.caption.slice(0, 180)}...` : item.caption) : "No further details available for this bulletin."}
+                  </p>
+                  <button 
+                    className="read-story-btn"
+                    onClick={() => setSelectedNews(item)}
+                  >
+                    Read Full Story <ArrowRight size={14} />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <AnimatePresence>
+          {selectedNews && (
+            <div className="modal-overlay" onClick={() => setSelectedNews(null)}>
+              <motion.div 
+                className="news-detail-modal"
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button className="news-modal-close" onClick={() => setSelectedNews(null)}>
+                  <X size={20} />
+                </button>
+                <div className="news-modal-header">
+                  <span className="news-badge">{selectedNews.section}</span>
+                  <span className="news-modal-time">
+                    <Calendar size={13} /> {selectedNews.date} at {selectedNews.time}
+                  </span>
+                </div>
+                <h2 className="news-modal-title">{selectedNews.heading}</h2>
+                <div className="news-modal-content-wrap">
+                  <p className="news-modal-caption">
+                    {selectedNews.caption || "No further details available for this bulletin."}
+                  </p>
+                </div>
+                <div className="news-modal-footer">
+                  <p className="news-modal-source">Source: Capital Market Publishers</p>
+                  <button className="btn-secondary" onClick={() => setSelectedNews(null)}>Close</button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+      </section>
+    );
+  }
 
   const marqueeItems = [...news, ...news];
 
@@ -4169,6 +4294,7 @@ export default function App() {
             <FeedbackSection />
           </>
         )}
+        {page === 'news' && <LiveNews isFullPage={true} />}
         {page === 'webinars' && <WebinarSchedule onRegisterClick={setRegisteringWebinar} />}
         {page === 'services' && <Services cmsContent={cmsContent} />}
         {page === 'hub' && <ServicesHub />}
