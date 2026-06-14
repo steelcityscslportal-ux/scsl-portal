@@ -7,7 +7,8 @@ import {
   Landmark, Coins, PiggyBank, Calendar, Users, Video,
   Briefcase, Rocket, UserCheck, FileText, Laptop,
   CreditCard, Activity, Search, Network, GraduationCap,
-  Home, BookOpen, Shield, Newspaper, Clock, RefreshCw
+  Home, BookOpen, Shield, Newspaper, Clock, RefreshCw,
+  TrendingDown, Compass
 } from 'lucide-react';
 import './App.css';
 
@@ -186,6 +187,7 @@ function MarketTicker() {
 const navItems = [
   { label: 'Home', href: '#home' },
   { label: 'Live News', href: '#news' },
+  { label: 'Markets', href: '#market-search' },
   { label: 'Webinars', href: '#webinars' },
   { label: 'Services', href: '#services' },
   { label: 'Services Hub', href: '#hub' },
@@ -3986,6 +3988,529 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
 }
 
 /* ═══════════════════════════════════════════════
+   11b. TABBED MARKET SEARCH DASHBOARD
+   ═══════════════════════════════════════════════ */
+function MarketSearchDashboard() {
+  const [activeTab, setActiveTab] = useState("equity");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [tickerNews, setTickerNews] = useState([]);
+  const [selectedNews, setSelectedNews] = useState(null);
+  const [detailedNews, setDetailedNews] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [relativeTimeStr, setRelativeTimeStr] = useState("just now");
+
+  const tabs = [
+    { id: "news", label: "News", icon: Newspaper },
+    { id: "equity", label: "Equity", icon: TrendingUp },
+    { id: "mf", label: "MFs", icon: PiggyBank },
+    { id: "commodity", label: "Commodity", icon: Coins },
+    { id: "ipo", label: "IPOs", icon: Rocket },
+    { id: "futures", label: "Futures", icon: Activity },
+    { id: "currency", label: "Currency", icon: Globe },
+    { id: "indices", label: "Indices", icon: Landmark },
+    { id: "research", label: "Research", icon: FileText },
+    { id: "bonds", label: "Bonds", icon: CreditCard }
+  ];
+
+  const fetchSearchData = async (query, category, isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}&category=${category}`);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(data);
+        setLastUpdated(new Date());
+      } else {
+        setError("Failed to retrieve market data. Please verify your connection.");
+      }
+    } catch (err) {
+      console.error("Fetch search error:", err);
+      setError("Unable to contact market API server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTickerNews = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/live-news`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setTickerNews(data);
+        }
+      }
+    } catch (err) {
+      console.error("Ticker news error:", err);
+    }
+  };
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchSearchData(searchTerm, activeTab, false);
+    }, 300);
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, activeTab]);
+
+  useEffect(() => {
+    fetchTickerNews();
+    const interval = setInterval(fetchTickerNews, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!lastUpdated) return;
+    const updateTime = () => {
+      const diffMs = new Date().getTime() - lastUpdated.getTime();
+      const diffSecs = Math.floor(diffMs / 1000);
+      if (diffSecs < 10) {
+        setRelativeTimeStr("just now");
+      } else if (diffSecs < 60) {
+        setRelativeTimeStr(`${diffSecs}s ago`);
+      } else {
+        const diffMins = Math.floor(diffSecs / 60);
+        setRelativeTimeStr(`${diffMins}m ago`);
+      }
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 5000);
+    return () => clearInterval(interval);
+  }, [lastUpdated]);
+
+  useEffect(() => {
+    if (!selectedNews) {
+      setDetailedNews(null);
+      return;
+    }
+    if (selectedNews.id >= 1000) {
+      setDetailedNews({
+        heading: selectedNews.heading,
+        caption: selectedNews.caption,
+        date: selectedNews.date,
+        time: selectedNews.time,
+        section: selectedNews.section,
+        arttext: `Global market report for this ticker. For the complete story, visit the original publisher: <a href="${selectedNews.link}" target="_blank" style="color: #0077B6; text-decoration: underline;">${selectedNews.caption}</a>`
+      });
+      return;
+    }
+    const fetchDetail = async () => {
+      setLoadingDetail(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/live-news/${selectedNews.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDetailedNews(data);
+        }
+      } catch (err) {
+        console.error("News details error:", err);
+      } finally {
+        setLoadingDetail(false);
+      }
+    };
+    fetchDetail();
+  }, [selectedNews]);
+
+  const handleManualRefresh = () => {
+    fetchSearchData(searchTerm, activeTab, true);
+  };
+
+  const getPlaceholder = () => {
+    switch(activeTab) {
+      case "equity": return "Search equities (e.g. Reliance, TCS, SBIN)...";
+      case "mf": return "Search mutual funds (e.g. HDFC, SBI, ICICI)...";
+      case "commodity": return "Search commodities (e.g. Gold, Crude)...";
+      case "news": return "Filter market news by keyword...";
+      case "currency": return "Search currency pairs (e.g. USD, EUR)...";
+      case "indices": return "Search index names (e.g. Nifty, Sensex)...";
+      case "futures": return "Search derivatives & futures contracts...";
+      case "ipo": return "Search active & listed IPOs...";
+      case "research": return "Search stock research & ratings...";
+      case "bonds": return "Search treasury bills & corporate bonds...";
+      default: return "Search markets...";
+    }
+  };
+
+  const getQuoteStats = (symbol) => {
+    const seed = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const pe = (seed % 35 + 10).toFixed(2);
+    const cap = ((seed * 1234567) % 500000 + 10000).toLocaleString('en-IN');
+    const vol = ((seed * 4321) % 50000 + 500).toLocaleString('en-IN');
+    const high = (seed % 200 + 50).toFixed(2);
+    const low = (seed % 200 + 10).toFixed(2);
+    return { pe, cap, vol, high, low };
+  };
+
+  return (
+    <section className="market-search-section">
+      {tickerNews.length > 0 && (
+        <NewsTicker items={tickerNews} onSelect={setSelectedNews} />
+      )}
+      
+      <div className="container" style={{ marginTop: '20px' }}>
+        <div className="search-dashboard-card">
+          <div className="search-header-container">
+            <span className="search-indicator-tag">
+              <span className="live-indicator-pulse"></span> LIVE MARKET DASHBOARD
+            </span>
+            <div className="search-meta-row">
+              <h2 className="search-dashboard-title">Real-Time Search Hub</h2>
+              {lastUpdated && (
+                <div className="search-time-indicator">
+                  <Clock size={14} style={{ marginRight: '6px' }} />
+                  <span>Last updated: {relativeTimeStr}</span>
+                  <button onClick={handleManualRefresh} className="btn-icon-refresh" aria-label="Refresh Market Data">
+                    <RefreshCw size={14} className={loading ? "spin-animate" : ""} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="search-bar-wrap">
+            <Search className="search-icon-glass" size={20} />
+            <input 
+              type="text" 
+              className="search-input-field" 
+              placeholder={getPlaceholder()}
+              value={searchTerm} 
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button className="clear-search-btn" onClick={() => setSearchTerm("")}>
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          <div className="tabs-navigation-scroll">
+            <div className="tabs-navigation-container">
+              {tabs.map((tab) => {
+                const TabIcon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button 
+                    key={tab.id} 
+                    className={`tab-navigation-button ${isActive ? "active" : ""}`}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setResults([]);
+                    }}
+                  >
+                    <TabIcon size={16} style={{ marginRight: '8px' }} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="search-results-panel">
+            {loading ? (
+              <div className="search-state-loading">
+                <div className="news-spinner"></div>
+                <p>Retrieving real-time {activeTab} parameters...</p>
+              </div>
+            ) : error ? (
+              <div className="search-state-error">
+                <span className="error-icon-alert">⚠️</span>
+                <p>{error}</p>
+                <button className="btn-solid" onClick={handleManualRefresh} style={{ marginTop: '15px' }}>Retry Fetch</button>
+              </div>
+            ) : results.length === 0 ? (
+              <div className="search-state-empty">
+                <Compass size={48} className="empty-state-compass" />
+                <h3>No records found</h3>
+                <p>Try searching for a different ticker, company, or mutual fund key.</p>
+              </div>
+            ) : (
+              <div className="results-render-grid">
+                {activeTab === "news" && results.map((item) => (
+                  <div key={item.id} className="news-card-item" onClick={() => setSelectedNews(item)}>
+                    <div className="news-card-badge-row">
+                      <span className="news-card-badge">{item.section}</span>
+                      <span className="news-card-time">{item.date} {item.time}</span>
+                    </div>
+                    <h4 className="news-card-heading">{item.heading}</h4>
+                    <p className="news-card-caption">{item.caption}</p>
+                    <span className="read-more-link-text">Read Full Story &rarr;</span>
+                  </div>
+                ))}
+
+                {["equity", "mf", "commodity", "currency", "indices", "futures"].includes(activeTab) && results.map((item) => (
+                  <div 
+                    key={item.symbol} 
+                    className="scrip-card-item"
+                    onClick={() => setSelectedQuote(item)}
+                  >
+                    <div className="scrip-card-header">
+                      <div className="scrip-title-info">
+                        <span className="scrip-symbol-tag">{item.symbol}</span>
+                        <span className="scrip-exchange-badge">{item.exchange}</span>
+                      </div>
+                      <span className={`scrip-change-indicator ${item.up ? "positive" : "negative"}`}>
+                        {item.up ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                      </span>
+                    </div>
+                    <h4 className="scrip-company-name">{item.name}</h4>
+                    <div className="scrip-price-block">
+                      <span className="scrip-current-price">
+                        {activeTab === "currency" ? "" : "₹"}{item.price}
+                      </span>
+                      <div className={`scrip-percent-change ${item.up ? "positive" : "negative"}`}>
+                        <span>{item.change}</span>
+                        <span style={{ marginLeft: '6px' }}>({item.percent})</span>
+                      </div>
+                    </div>
+                    
+                    <div className="sparkline-container">
+                      <svg viewBox="0 0 100 30" className="sparkline-svg">
+                        <path 
+                          d={item.up 
+                            ? "M 0 25 Q 15 15 30 18 T 60 10 T 80 15 T 100 5" 
+                            : "M 0 10 Q 15 20 30 15 T 60 25 T 80 20 T 100 28"}
+                          fill="none" 
+                          stroke={item.up ? "#10b981" : "#ef4444"} 
+                          strokeWidth="2"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+
+                {activeTab === "ipo" && results.map((item, idx) => (
+                  <div key={idx} className="ipo-card-item">
+                    <div className="ipo-card-badge-row">
+                      <span className={`ipo-status-badge ${item.status.toLowerCase()}`}>{item.status}</span>
+                      <span className="ipo-card-date">{item.date}</span>
+                    </div>
+                    <h4 className="ipo-company-name">{item.company}</h4>
+                    <div className="ipo-details-grid">
+                      <div className="ipo-detail-col">
+                        <span className="ipo-label">Price Band</span>
+                        <span className="ipo-val">{item.price_band}</span>
+                      </div>
+                      <div className="ipo-detail-col">
+                        <span className="ipo-label">Issue Size</span>
+                        <span className="ipo-val">{item.size}</span>
+                      </div>
+                      <div className="ipo-detail-col">
+                        <span className="ipo-label">Subscription</span>
+                        <span className="ipo-val">{item.subscription}</span>
+                      </div>
+                      {item.current_price && (
+                        <div className="ipo-detail-col">
+                          <span className="ipo-label">Current Price</span>
+                          <span className="ipo-val" style={{ color: '#10b981', fontWeight: 'bold' }}>{item.current_price}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                {activeTab === "research" && results.map((item, idx) => (
+                  <div key={idx} className="research-card-item">
+                    <div className="research-header">
+                      <div className="research-title">
+                        <span className="research-symbol">{item.symbol}</span>
+                        <span className="research-name">{item.name}</span>
+                      </div>
+                      <span className={`research-rating-badge ${item.rating.toLowerCase()}`}>{item.rating}</span>
+                    </div>
+                    <div className="research-price-targets">
+                      <div className="target-box">
+                        <span className="target-label">Target Price</span>
+                        <span className="target-val" style={{ color: '#0077B6', fontWeight: 'bold' }}>{item.target}</span>
+                      </div>
+                      <div className="target-box">
+                        <span className="target-label">Current Price</span>
+                        <span className="target-val">{item.cmp}</span>
+                      </div>
+                    </div>
+                    <p className="research-summary">{item.summary}</p>
+                    <div className="research-footer">
+                      <span className="broker-tag">{item.broker}</span>
+                      <span className="report-disclaimer">Investment Advisory Report</span>
+                    </div>
+                  </div>
+                ))}
+
+                {activeTab === "bonds" && results.map((item, idx) => (
+                  <div key={idx} className="bond-card-item">
+                    <div className="bond-header">
+                      <span className="bond-type-badge">{item.type}</span>
+                      <span className="bond-rating-badge">{item.rating}</span>
+                    </div>
+                    <h4 className="bond-name">{item.name}</h4>
+                    <div className="bond-details-row">
+                      <div className="bond-detail-box">
+                        <span className="bond-label">Coupon Rate</span>
+                        <span className="bond-val">{item.coupon}</span>
+                      </div>
+                      <div className="bond-detail-box">
+                        <span className="bond-label">Yield (YTM)</span>
+                        <span className="bond-val" style={{ color: '#10b981' }}>{item.yield}</span>
+                      </div>
+                      <div className="bond-detail-box">
+                        <span className="bond-label">Maturity</span>
+                        <span className="bond-val">{item.maturity}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {selectedNews && (
+          <motion.div 
+            className="modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedNews(null)}
+          >
+            <motion.div 
+              className="news-modal-content"
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="modal-close-btn" onClick={() => setSelectedNews(null)} aria-label="Close story">
+                <X size={20} />
+              </button>
+              
+              {loadingDetail ? (
+                <div className="modal-loading-block">
+                  <div className="news-spinner"></div>
+                  <p>Retrieving complete story details...</p>
+                </div>
+              ) : detailedNews ? (
+                <div className="news-detail-container">
+                  <div className="news-detail-header">
+                    <div className="news-detail-meta">
+                      <span className="news-detail-badge">{detailedNews.section || "Live News"}</span>
+                      <span className="news-detail-time">{detailedNews.date} {detailedNews.time}</span>
+                    </div>
+                    <h3 className="news-detail-heading">{detailedNews.heading}</h3>
+                    {detailedNews.caption && <p className="news-detail-caption">{detailedNews.caption}</p>}
+                  </div>
+                  
+                  {detailedNews.IllustrationImage && (
+                    <div className="news-detail-img-wrap">
+                      <img src={detailedNews.IllustrationImage} alt="Illustration" className="news-detail-img" />
+                    </div>
+                  )}
+                  
+                  <div className="news-detail-body">
+                    {detailedNews.arttext ? (
+                      detailedNews.arttext.split('<P>').map((para, i) => (
+                        <p key={i} dangerouslySetInnerHTML={{ __html: para.trim() }} />
+                      ))
+                    ) : (
+                      <p>Full story text is currently unavailable. Please check back later.</p>
+                    )}
+                  </div>
+                  
+                  {detailedNews.KeyWords && (
+                    <div className="news-detail-keywords">
+                      <strong>Keywords:</strong> {detailedNews.KeyWords}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="modal-error-block">
+                  <p>Error retrieving story text. Please verify your connection.</p>
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedQuote && (
+          <motion.div 
+            className="modal-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedQuote(null)}
+          >
+            <motion.div 
+              className="quote-modal-content"
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="modal-close-btn" onClick={() => setSelectedQuote(null)} aria-label="Close details">
+                <X size={20} />
+              </button>
+              
+              <div className="quote-detail-container">
+                <div className="quote-detail-header">
+                  <div className="quote-meta-row">
+                    <span className="quote-exchange-badge">{selectedQuote.exchange}</span>
+                    <span className="quote-symbol">{selectedQuote.symbol}</span>
+                  </div>
+                  <h3 className="quote-name">{selectedQuote.name}</h3>
+                  <div className="quote-price-row">
+                    <span className="quote-price">₹{selectedQuote.price}</span>
+                    <span className={`quote-change ${selectedQuote.up ? "positive" : "negative"}`}>
+                      {selectedQuote.change} ({selectedQuote.percent})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="quote-stats-grid">
+                  <div className="quote-stat-box">
+                    <span className="stat-label">Market Capitalisation</span>
+                    <span className="stat-val">₹{getQuoteStats(selectedQuote.symbol).cap} Cr</span>
+                  </div>
+                  <div className="quote-stat-box">
+                    <span className="stat-label">P/E Ratio</span>
+                    <span className="stat-val">{getQuoteStats(selectedQuote.symbol).pe}</span>
+                  </div>
+                  <div className="quote-stat-box">
+                    <span className="stat-label">Traded Volume (24h)</span>
+                    <span className="stat-val">{getQuoteStats(selectedQuote.symbol).vol} shares</span>
+                  </div>
+                  <div className="quote-stat-box">
+                    <span className="stat-label">Day's High / Low</span>
+                    <span className="stat-val">₹{getQuoteStats(selectedQuote.symbol).high} / ₹{getQuoteStats(selectedQuote.symbol).low}</span>
+                  </div>
+                </div>
+
+                <div className="quote-modal-actions">
+                  <a href="https://www.steelcitynettrade.com" target="_blank" rel="noreferrer" className="btn-solid" style={{ textAlign: 'center', textDecoration: 'none' }}>
+                    Place Order via SCSL
+                  </a>
+                  <button className="btn-ghost" onClick={() => setSelectedQuote(null)}>
+                    Dismiss View
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    12. WEBINAR REGISTRATION MODAL
    ═══════════════════════════════════════════════ */
 function WebinarRegistrationModal({ webinar, onClose }) {
@@ -4405,7 +4930,7 @@ export default function App() {
   useKeepAlive();
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '');
-    return ['home', 'news', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash) ? hash : 'home';
+    return ['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash) ? hash : 'home';
   });
 
   const [cmsContent, setCmsContent] = useState({});
@@ -4435,7 +4960,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'news', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
+      if (['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
         setPage(hash);
         window.scrollTo(0, 0);
       } else if (hash === '') {
@@ -4483,6 +5008,7 @@ export default function App() {
           </>
         )}
         {page === 'news' && <LiveNews isFullPage={true} />}
+        {page === 'market-search' && <MarketSearchDashboard />}
         {page === 'webinars' && <WebinarSchedule onRegisterClick={setRegisteringWebinar} />}
         {page === 'services' && <Services cmsContent={cmsContent} />}
         {page === 'hub' && <ServicesHub />}

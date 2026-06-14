@@ -960,6 +960,278 @@ async def live_news_detail(sno: int):
     return {"error": "Failed to retrieve story details. Please check your connection."}
 
 
+# ─── Tabbed Market Search Dashboard Endpoints ──────────
+
+DEFAULT_SCRIPS = {
+    "equity": ["RELIANCE.NS", "TCS.NS", "INFY.NS", "SBIN.NS", "ITC.NS", "TATAMOTORS.NS", "SAIL.NS", "HDFCBANK.NS"],
+    "mf": ["0P0000XWLL.BO", "0P0000XVKY.BO", "0P0000XVKS.BO", "0P0000XVKR.BO"],
+    "commodity": ["GC=F", "SI=F", "CL=F", "NG=F", "HG=F"],
+    "currency": ["USDINR=X", "EURINR=X", "GBPINR=X", "JPYINR=X"],
+    "indices": ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^GSPC", "^DJI"],
+    "futures": ["ES=F", "NQ=F", "YM=F", "GC=F", "CL=F"]
+}
+
+MOCK_IPOS = [
+    {"company": "Swiggy Limited", "price_band": "₹371 - ₹390", "size": "₹11,327 Cr", "date": "12-14 Jun 2026", "status": "Open", "subscription": "3.25x"},
+    {"company": "Acme Solar Holdings", "price_band": "₹275 - ₹289", "size": "₹2,900 Cr", "date": "22-24 Jun 2026", "status": "Upcoming", "subscription": "N/A"},
+    {"company": "Zinka Logistics (BlackBuck)", "price_band": "₹250 - ₹273", "size": "₹1,114 Cr", "date": "28-30 Jun 2026", "status": "Upcoming", "subscription": "N/A"},
+    {"company": "Hyundai Motor India", "price_band": "₹1860 - ₹1960", "size": "₹27,870 Cr", "date": "15 Oct 2025", "status": "Listed", "subscription": "2.37x", "current_price": "₹1,780"},
+    {"company": "Bajaj Housing Finance", "price_band": "₹66 - ₹70", "size": "₹6,560 Cr", "date": "09 Sep 2024", "status": "Listed", "subscription": "63.7x", "current_price": "₹142"},
+    {"company": "Ola Electric Mobility", "price_band": "₹72 - ₹76", "size": "₹6,145 Cr", "date": "02 Aug 2024", "status": "Listed", "subscription": "4.27x", "current_price": "₹95"}
+]
+
+MOCK_RESEARCH = [
+    {"symbol": "RELIANCE", "name": "Reliance Industries Ltd", "rating": "BUY", "target": "₹1,550", "cmp": "₹1,296", "broker": "SCSL Wealth Research", "summary": "Retail expansions and Jio 5G tariff hikes expected to drive double-digit EBITDA growth. Demerger of financial services unlocks value."},
+    {"symbol": "TCS", "name": "Tata Consultancy Services Ltd", "rating": "HOLD", "target": "₹4,200", "cmp": "₹3,850", "broker": "SCSL Tech Research", "summary": "Strong order book in cloud migration and enterprise AI, but headwinds in banking sector budgets lead to conservative margins."},
+    {"symbol": "SBIN", "name": "State Bank of India", "rating": "BUY", "target": "₹1,150", "cmp": "₹1,016", "broker": "SCSL Banking Desk", "summary": "Net Interest Margin remains stable. Historic low gross NPA ratios and 15% credit growth indicate a solid balance sheet."},
+    {"symbol": "INFY", "name": "Infosys Limited", "rating": "BUY", "target": "₹1,750", "cmp": "₹1,520", "broker": "SCSL Tech Research", "summary": "Accelerating digital transformation deals and strong European performance supporting near-term guidance revisions."},
+    {"symbol": "ITC", "name": "ITC Limited", "rating": "BUY", "target": "₹550", "cmp": "₹480", "broker": "SCSL Consumer Desk", "summary": "Demerger of Hotel business progresses smoothly. Cigarette volume growth is highly stable and dividend payout yields 3.8%."}
+]
+
+MOCK_BONDS = [
+    {"name": "Sovereign Gold Bond (SGB) Series III", "coupon": "2.50% p.a.", "yield": "6.20%", "maturity": "Dec 2031", "rating": "Sovereign", "type": "Government"},
+    {"name": "NHAI Tax Free Bonds 2026", "coupon": "7.35% p.a.", "yield": "5.40%", "maturity": "Dec 2026", "rating": "AAA", "type": "Public Sector"},
+    {"name": "REC Tax Free Bonds 2027", "coupon": "7.22% p.a.", "yield": "5.45%", "maturity": "Mar 2027", "rating": "AAA", "type": "Public Sector"},
+    {"name": "SBI Perpetual Basel III Tier-I Bond", "coupon": "8.10% p.a.", "yield": "7.90%", "maturity": "Perpetual", "rating": "AA+", "type": "Financial"},
+    {"name": "Nabard Corporate Bond 2029", "coupon": "7.65% p.a.", "yield": "7.50%", "maturity": "Jun 2029", "rating": "AAA", "type": "Corporate"},
+    {"name": "Govt of India 7.18% GS 2033", "coupon": "7.18% p.a.", "yield": "7.12%", "maturity": "Aug 2033", "rating": "Sovereign", "type": "Government"}
+]
+
+def get_yahoo_search(q: str):
+    url = f"https://query1.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(q)}&quotesCount=10"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=3) as res:
+            return json.loads(res.read().decode('utf-8')).get("quotes", [])
+    except Exception as e:
+        print("Yahoo search error:", e)
+        return []
+
+def get_yahoo_news(q: str):
+    url = f"https://query1.finance.yahoo.com/v1/finance/search?q={urllib.parse.quote(q)}&newsCount=8"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=3) as res:
+            return json.loads(res.read().decode('utf-8')).get("news", [])
+    except Exception as e:
+        print("Yahoo news search error:", e)
+        return []
+
+def get_yahoo_quote_sync(symbol: str):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=3) as res:
+            data = json.loads(res.read().decode('utf-8'))
+            meta = data['chart']['result'][0]['meta']
+            return {
+                "symbol": symbol,
+                "price": meta.get('regularMarketPrice'),
+                "prev": meta.get('previousClose'),
+                "exchange": meta.get('exchangeName', '')
+            }
+    except Exception as e:
+        return {"symbol": symbol, "error": str(e)}
+
+async def fetch_yahoo_quote(symbol: str):
+    return await asyncio.to_thread(get_yahoo_quote_sync, symbol)
+
+@app.get("/api/search")
+async def search_market(q: str = "", category: str = "equity"):
+    category = category.lower().strip()
+    q = q.strip()
+    
+    if category == "news":
+        cm_news = []
+        try:
+            cm_news = await live_news()
+        except Exception:
+            pass
+            
+        yahoo_news = []
+        if q:
+            yahoo_news = await asyncio.to_thread(get_yahoo_news, q)
+            
+        filtered_cm = []
+        for item in cm_news:
+            if not q or q.lower() in item["heading"].lower() or q.lower() in item.get("caption", "").lower():
+                filtered_cm.append({
+                    "id": item["id"],
+                    "heading": item["heading"],
+                    "caption": item["caption"],
+                    "date": item["date"],
+                    "time": item["time"],
+                    "section": item["section"],
+                    "link": f"https://www.capitalmarket.com/News/Live-News/{item['id']}"
+                })
+                
+        formatted_yahoo = []
+        for idx, item in enumerate(yahoo_news):
+            pub_time = item.get("providerPublishTime", 0)
+            date_str = ""
+            time_str = ""
+            if pub_time:
+                dt = datetime.datetime.fromtimestamp(pub_time)
+                date_str = dt.strftime("%d %b %Y")
+                time_str = dt.strftime("%H:%M")
+                
+            formatted_yahoo.append({
+                "id": 1000 + idx,
+                "heading": item.get("title", ""),
+                "caption": f"Published by {item.get('publisher', 'Yahoo Finance')}",
+                "date": date_str,
+                "time": time_str,
+                "section": "Global Market News",
+                "link": item.get("link", "")
+            })
+            
+        return filtered_cm + formatted_yahoo
+        
+    elif category in ["equity", "mf", "commodity", "currency", "indices", "futures"]:
+        symbols = []
+        quotes = []
+        
+        if not q:
+            symbols = DEFAULT_SCRIPS.get(category, [])
+        else:
+            quotes = await asyncio.to_thread(get_yahoo_search, q)
+            for item in quotes:
+                sym = item.get("symbol", "")
+                qtype = item.get("quoteType", "").lower()
+                exch = item.get("exchDisp", "").lower()
+                
+                if category == "equity" and qtype == "equity":
+                    symbols.append(sym)
+                elif category == "mf" and qtype in ["mutualfund", "etf"]:
+                    symbols.append(sym)
+                elif category == "commodity" and qtype == "future" and ("commodity" in exch or sym in DEFAULT_SCRIPS["commodity"] or any(c in sym.lower() for c in ["gc=f", "si=f", "cl=f", "ng=f", "hg=f"])):
+                    symbols.append(sym)
+                elif category == "currency" and qtype == "currency":
+                    symbols.append(sym)
+                elif category == "indices" and qtype == "index":
+                    symbols.append(sym)
+                elif category == "futures" and qtype == "future":
+                    symbols.append(sym)
+            
+            symbols = list(dict.fromkeys(symbols))[:10]
+            if not symbols:
+                symbols = [q.upper()]
+                
+        tasks = [fetch_yahoo_quote(sym) for sym in symbols]
+        quote_results = await asyncio.gather(*tasks)
+        
+        results = []
+        names_map = {}
+        if q and quotes:
+            for item in quotes:
+                names_map[item.get("symbol")] = item.get("shortname")
+                
+        for r in quote_results:
+            if "error" in r:
+                if q:
+                    results.append({
+                        "symbol": r["symbol"],
+                        "name": r["symbol"],
+                        "price": "N/A",
+                        "change": "0.00",
+                        "percent": "0.00%",
+                        "up": True,
+                        "exchange": "N/A"
+                    })
+                continue
+                
+            price = r.get("price")
+            prev = r.get("prev")
+            symbol = r.get("symbol")
+            exch = r.get("exchange")
+            
+            if price is not None and prev is not None:
+                diff = price - prev
+                pct = (diff / prev) * 100 if prev else 0
+                sign = "+" if diff >= 0 else ""
+                
+                dec = 4 if price < 2 else 2
+                price_str = f"{price:,.{dec}f}"
+                diff_str = f"{sign}{diff:,.{dec}f}"
+                pct_str = f"{sign}{pct:,.2f}%"
+                
+                name = names_map.get(symbol) or symbol
+                if name == symbol:
+                    name_mapping = {
+                        "RELIANCE.NS": "RELIANCE INDUSTRIES LTD",
+                        "TCS.NS": "TATA CONSULTANCY SERVICES",
+                        "INFY.NS": "INFOSYS LIMITED",
+                        "SBIN.NS": "STATE BANK OF INDIA",
+                        "ITC.NS": "ITC LIMITED",
+                        "TATAMOTORS.NS": "TATA MOTORS LIMITED",
+                        "SAIL.NS": "STEEL AUTHORITY OF INDIA",
+                        "HDFCBANK.NS": "HDFC BANK LIMITED",
+                        "GC=F": "GOLD FUTURES",
+                        "SI=F": "SILVER FUTURES",
+                        "CL=F": "CRUDE OIL FUTURES",
+                        "NG=F": "NATURAL GAS FUTURES",
+                        "HG=F": "COPPER FUTURES",
+                        "USDINR=X": "USD to INR Exchange Rate",
+                        "EURINR=X": "EUR to INR Exchange Rate",
+                        "GBPINR=X": "GBP to INR Exchange Rate",
+                        "JPYINR=X": "100 JPY to INR Exchange Rate",
+                        "^NSEI": "NIFTY 50 INDEX",
+                        "^BSESN": "SENSEX INDEX",
+                        "^NSEBANK": "NIFTY BANK INDEX",
+                        "^CNXIT": "NIFTY IT INDEX",
+                        "^GSPC": "S&P 500 INDEX",
+                        "^DJI": "DOW JONES INDUSTRIAL AVERAGE",
+                        "0P0000XWLL.BO": "SBI Bluechip Fund - Direct Growth",
+                        "0P0000XVKY.BO": "Parag Parikh Flexi Cap - Direct Growth",
+                        "0P0000XVKS.BO": "HDFC Mid-Cap Opportunities - Growth",
+                        "0P0000XVKR.BO": "ICICI Prudential Bluechip - Growth"
+                    }
+                    name = name_mapping.get(symbol, symbol)
+                
+                results.append({
+                    "symbol": symbol,
+                    "name": name,
+                    "price": price_str,
+                    "change": diff_str,
+                    "percent": pct_str,
+                    "up": diff >= 0,
+                    "exchange": "NSE" if symbol.endswith(".NS") else "BSE" if symbol.endswith(".BO") else exch or "Global"
+                })
+        return results
+        
+    elif category == "ipos":
+        if not q:
+            return MOCK_IPOS
+        return [item for item in MOCK_IPOS if q.lower() in item["company"].lower()]
+        
+    elif category == "research":
+        if not q:
+            return MOCK_RESEARCH
+        filtered = [item for item in MOCK_RESEARCH if q.lower() in item["symbol"].lower() or q.lower() in item["name"].lower()]
+        if not filtered:
+            symbol_up = q.upper()
+            filtered = [{
+                "symbol": symbol_up,
+                "name": f"{symbol_up} Group Corporation",
+                "rating": random.choice(["BUY", "HOLD", "SELL"]),
+                "target": "₹" + f"{random.randint(150, 5000):,}",
+                "cmp": "₹" + f"{random.randint(100, 4000):,}",
+                "broker": "SCSL Wealth Research",
+                "summary": f"Analytical view on {symbol_up}. Reviewing near-term capital expenditure plans and product line execution. Corporate balance sheet remains healthy with low leverage ratios."
+            }]
+        return filtered
+        
+    elif category == "bonds":
+        if not q:
+            return MOCK_BONDS
+        return [item for item in MOCK_BONDS if q.lower() in item["name"].lower()]
+        
+    return []
+
+
 @app.post("/api/track/pageview")
 async def track_pageview(req_data: PageViewReq, request: Request, db: Session = Depends(get_db)):
     ip = request.client.host
