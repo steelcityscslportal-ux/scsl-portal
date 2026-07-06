@@ -3593,6 +3593,8 @@ function AdminCRMTab({ authHeader }) {
   const [cAddress, setCAddress] = useState('');
   const [cRm, setCRm] = useState('mukeshrm');
   const [cStatus, setCStatus] = useState('Active');
+  const [showPassword, setShowPassword] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
   
   // Holdings
   const [hScheme, setHScheme] = useState('');
@@ -3692,9 +3694,25 @@ function AdminCRMTab({ authHeader }) {
 
   const handleCreateClient = async (e) => {
     e.preventDefault();
+    setUsernameError('');
+
+    // Uniqueness check: username must not exist in another client
+    const isDuplicate = clients.some(c =>
+      c.username.toLowerCase() === cUsername.toLowerCase() &&
+      (!selectedClient || c.username.toLowerCase() !== selectedClient.username.toLowerCase())
+    );
+    if (isDuplicate) {
+      setUsernameError('This username is already taken. Please choose a different one.');
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients`, {
-        method: 'POST',
+      const method = selectedClient ? 'PUT' : 'POST';
+      const url = selectedClient
+        ? `${API_BASE_URL}/api/admin/crm/clients/${selectedClient.id}`
+        : `${API_BASE_URL}/api/admin/crm/clients`;
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
         body: JSON.stringify({
           name: cName, username: cUsername, password_raw: cPassword,
@@ -3703,14 +3721,16 @@ function AdminCRMTab({ authHeader }) {
         })
       });
       if (res.ok) {
-        alert('Client details saved successfully!');
+        alert(selectedClient ? 'Client profile updated successfully!' : 'Client created successfully!');
         fetchClients();
         setSelectedClient(null);
+        setUsernameError('');
         // Reset inputs
         setCName(''); setCUsername(''); setCPassword(''); setCEmail(''); setCPhone('');
         setCPan(''); setCDob(''); setCAddress(''); setCRm('mukeshrm'); setCStatus('Active');
       } else {
-        alert('Failed to save client details.');
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.detail || 'Failed to save client details.');
       }
     } catch (err) {
       console.error(err);
@@ -4179,11 +4199,46 @@ function AdminCRMTab({ authHeader }) {
                     </div>
                     <div className="crm-form-group">
                       <label>CRM Username (unique)</label>
-                      <input type="text" className="crm-form-control" required placeholder="Assign username" value={cUsername} onChange={e => setCUsername(e.target.value)} disabled={!!selectedClient} />
+                      <input
+                        type="text"
+                        className="crm-form-control"
+                        required
+                        placeholder="Assign a unique username"
+                        value={cUsername}
+                        onChange={e => { setCUsername(e.target.value); setUsernameError(''); }}
+                        style={{ borderColor: usernameError ? '#ef4444' : '' }}
+                      />
+                      {usernameError && (
+                        <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '4px', fontWeight: 600 }}>
+                          ⚠️ {usernameError}
+                        </div>
+                      )}
                     </div>
                     <div className="crm-form-group">
                       <label>CRM Password</label>
-                      <input type="text" className="crm-form-control" required placeholder="Assign password" value={cPassword} onChange={e => setCPassword(e.target.value)} />
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          className="crm-form-control"
+                          required
+                          placeholder="Assign a password"
+                          value={cPassword}
+                          onChange={e => setCPassword(e.target.value)}
+                          style={{ paddingRight: '80px' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(p => !p)}
+                          style={{
+                            position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)',
+                            background: 'none', border: 'none', cursor: 'pointer',
+                            color: 'var(--blue)', fontSize: '0.78rem', fontWeight: 700, padding: '2px 6px',
+                            borderRadius: '6px', whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {showPassword ? '🙈 Hide' : '👁 Show'}
+                        </button>
+                      </div>
                     </div>
                     <div className="crm-form-group">
                       <label>Email Address</label>

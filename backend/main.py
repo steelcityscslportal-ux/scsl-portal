@@ -2231,6 +2231,35 @@ async def delete_crm_client(client_id: int, username: str = Depends(authenticate
     db.commit()
     return {"success": True}
 
+@app.put("/api/admin/crm/clients/{client_id}")
+async def update_crm_client(client_id: int, req: CRMClientCreate, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    client = db.query(CRMClient).filter(CRMClient.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Check username uniqueness (if username is being changed)
+    if req.username != client.username:
+        existing = db.query(CRMClient).filter(CRMClient.username == req.username).first()
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Username '{req.username}' is already taken by another client.")
+        
+        # Update related holdings/tasks to new username
+        db.query(CRMPortfolio).filter(CRMPortfolio.client_username == client.username).update({"client_username": req.username})
+        db.query(CRMTask).filter(CRMTask.client_username == client.username).update({"client_username": req.username})
+
+    client.name = req.name
+    client.username = req.username
+    client.password_raw = req.password_raw
+    client.email = req.email
+    client.phone = req.phone
+    client.pan = req.pan or ""
+    client.dob = req.dob or ""
+    client.address = req.address or ""
+    client.rm_name = req.rm_name or "Adviser RM"
+    client.status = req.status or "Active"
+    db.commit()
+    return {"success": True, "username": client.username}
+
 @app.get("/api/admin/crm/clients/{client_username}/details")
 async def get_crm_client_details(client_username: str, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
     client = db.query(CRMClient).filter(CRMClient.username == client_username).first()
