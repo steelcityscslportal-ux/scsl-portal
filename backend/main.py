@@ -19,7 +19,7 @@ import datetime
 import asyncio
 import razorpay
 from sqlalchemy.orm import Session
-from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback, AdminUser, SystemSetting, HomepageContent
+from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback, AdminUser, SystemSetting, HomepageContent, CRMClient, CRMPortfolio, CRMTask, CRMLead
 from user_agents import parse
 
 app = FastAPI(title="SCSL Portal API", version="1.0.0")
@@ -476,7 +476,6 @@ def require_super_admin(current_user: AdminUser = Depends(authenticate_admin)) -
     return current_user
 
 # ─── CRM Client Authentication Helper ─────────────────────
-from database import CRMClient, CRMPortfolio, CRMTask, CRMLead
 
 def authenticate_crm_client(request: Request, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)) -> CRMClient:
     client = db.query(CRMClient).filter(CRMClient.username == credentials.username).first()
