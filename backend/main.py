@@ -14,8 +14,10 @@ import urllib.error
 import json
 import secrets
 import hashlib
+import hmac
 import datetime
 import asyncio
+import razorpay
 from sqlalchemy.orm import Session
 from database import SessionLocal, Contact, Registration, PageView, AdminLogin, AccountOpening, Webinar, Feedback, AdminUser, SystemSetting, HomepageContent
 from user_agents import parse
@@ -53,6 +55,21 @@ class WebinarRegistration(BaseModel):
     otp: str
     payment_utr: Optional[str] = ""  # UTR/transaction ref for paid webinars
 
+class PaymentInitiateReq(BaseModel):
+    name: str
+    email: str
+    phone: Optional[str] = None
+    webinar_id: int
+    topic: str
+    date: str
+    otp: str
+
+class PaymentVerifyReq(BaseModel):
+    razorpay_payment_id: str
+    razorpay_order_id: str
+    razorpay_signature: str
+    registration_id: int
+
 class OTPRequest(BaseModel):
     email: str
 
@@ -86,6 +103,47 @@ class ToggleFeedbackReq(BaseModel):
     id: int
     is_approved: bool
 
+# ─── CRM PYDANTIC MODELS ─────────────────────────────────
+class ClientLoginReq(BaseModel):
+    username: str
+    password: str
+
+class CRMClientCreateReq(BaseModel):
+    name: str
+    username: str
+    password_raw: str
+    email: str
+    phone: str
+    pan: Optional[str] = ""
+    dob: Optional[str] = ""
+    address: Optional[str] = ""
+    rm_name: Optional[str] = "Adviser RM"
+    status: Optional[str] = "Active"
+
+class CRMPortfolioReq(BaseModel):
+    scheme_name: str
+    folio_number: Optional[str] = ""
+    units: float
+    purchase_price: float
+    current_nav: float
+    asset_class: Optional[str] = "Equity"
+
+class CRMTaskReq(BaseModel):
+    title: str
+    description: Optional[str] = ""
+    type: Optional[str] = "Call"  # Call, Meeting, Email, Task
+    status: Optional[str] = "Pending"  # Pending, Completed
+    due_date: Optional[str] = None  # ISO format string or None
+
+class CRMLeadReq(BaseModel):
+    name: str
+    email: Optional[str] = ""
+    phone: Optional[str] = ""
+    source: Optional[str] = "Website"
+    status: Optional[str] = "Contacted"
+    remarks: Optional[str] = ""
+
+
 # ─── OTP Store (in-memory, email -> {otp, timestamp}) ────
 otp_store = {}
 OTP_EXPIRY_SECONDS = 600  # 10 minutes
@@ -109,6 +167,12 @@ def get_setting(db: Session, key: str, default: str = "") -> str:
         return os.environ.get("SMTP_HOST", "smtp.gmail.com")
     elif key == "smtp_port":
         return os.environ.get("SMTP_PORT", "587")
+    elif key == "razorpay_key_id":
+        return os.environ.get("RAZORPAY_KEY_ID", "rzp_test_5jFwLpxR2MhG1F").strip()
+    elif key == "razorpay_key_secret":
+        return os.environ.get("RAZORPAY_KEY_SECRET", "test_secret_placeholder").strip()
+    elif key == "razorpay_webhook_secret":
+        return os.environ.get("RAZORPAY_WEBHOOK_SECRET", "test_webhook_secret_placeholder").strip()
     return default
 
 def send_email_helper(to_email: str, subject: str, html_content: str, db: Session) -> bool:
@@ -410,6 +474,24 @@ def require_super_admin(current_user: AdminUser = Depends(authenticate_admin)) -
             detail="Forbidden: This section requires super-admin permissions"
         )
     return current_user
+
+# ─── CRM Client Authentication Helper ─────────────────────
+from database import CRMClient, CRMPortfolio, CRMTask, CRMLead
+
+def authenticate_crm_client(request: Request, credentials: HTTPBasicCredentials = Depends(security), db: Session = Depends(get_db)) -> CRMClient:
+    client = db.query(CRMClient).filter(CRMClient.username == credentials.username).first()
+    if not client or client.password_raw != credentials.password:
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect CRM username or password",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    if client.status != "Active":
+        raise HTTPException(
+            status_code=403,
+            detail="Your CRM account has been deactivated. Please contact support."
+        )
+    return client
 
 def generate_otp():
     """Generate a unique 6-digit OTP"""
@@ -1357,6 +1439,203 @@ async def register_webinar(reg: WebinarRegistration, background_tasks: Backgroun
     msg_suffix = " Please wait for admin verification of your payment." if is_paid_webinar else ""
     return {"success": True, "message": f"Successfully registered for: {reg.topic}!{msg_suffix}"}
 
+@app.post("/api/payment/initiate")
+async def initiate_payment(req: PaymentInitiateReq, db: Session = Depends(get_db)):
+    email = req.email.strip().lower()
+    
+    # Check if OTP exists for this email
+    if email not in otp_store:
+        raise HTTPException(status_code=400, detail="No OTP was requested for this email. Please request an OTP first.")
+    
+    stored = otp_store[email]
+    
+    # Check OTP expiry
+    if time.time() - stored["timestamp"] > OTP_EXPIRY_SECONDS:
+        del otp_store[email]
+        raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+    
+    # Verify OTP
+    if req.otp.strip() != stored["otp"]:
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please check and try again.")
+    
+    # OTP verified — remove it so it can't be reused
+    del otp_store[email]
+    
+    webinar = db.query(Webinar).filter(Webinar.id == req.webinar_id).first()
+    if not webinar:
+        raise HTTPException(status_code=404, detail="Webinar not found.")
+    if not webinar.is_paid:
+        raise HTTPException(status_code=400, detail="This webinar is free. Please register directly.")
+        
+    registration = Registration(
+        name=req.name,
+        email=req.email,
+        phone=req.phone,
+        webinar_id=req.webinar_id,
+        topic=req.topic,
+        date=req.date,
+        payment_status="pending",
+        fee_paid=webinar.fee_amount or 0.0,
+        payment_utr=""
+    )
+    db.add(registration)
+    db.commit()
+    db.refresh(registration)
+    
+    key_id = get_setting(db, "razorpay_key_id")
+    key_secret = get_setting(db, "razorpay_key_secret")
+    
+    client = razorpay.Client(auth=(key_id, key_secret))
+    amount_in_paise = int((webinar.fee_amount or 0.0) * 100)
+    
+    order_data = {
+        "amount": amount_in_paise,
+        "currency": "INR",
+        "receipt": f"reg_{registration.id}",
+        "notes": {
+            "registration_id": registration.id,
+            "webinar_id": webinar.id,
+            "name": req.name,
+            "email": req.email
+        }
+    }
+    
+    try:
+        order = client.order.create(data=order_data)
+        registration.payment_utr = f"ORDER_ID:{order['id']}"
+        db.commit()
+        
+        return {
+            "success": True,
+            "order_id": order["id"],
+            "amount": amount_in_paise,
+            "currency": "INR",
+            "key_id": key_id,
+            "registration_id": registration.id
+        }
+    except Exception as e:
+        print(f"[RAZORPAY ORDER ERROR] {e}")
+        db.delete(registration)
+        db.commit()
+        raise HTTPException(status_code=500, detail=f"Failed to initiate payment: {str(e)}")
+
+@app.post("/api/payment/verify")
+async def verify_payment(req: PaymentVerifyReq, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    key_secret = get_setting(db, "razorpay_key_secret")
+    msg = f"{req.razorpay_order_id}|{req.razorpay_payment_id}"
+    try:
+        generated_signature = hmac.new(
+            key_secret.encode('utf-8'),
+            msg.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if not secrets.compare_digest(generated_signature, req.razorpay_signature):
+            raise HTTPException(status_code=400, detail="Invalid signature. Payment verification failed.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Payment signature check failed: {str(e)}")
+        
+    reg = db.query(Registration).filter(Registration.id == req.registration_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration record not found.")
+        
+    if reg.payment_status == "paid":
+        return {"success": True, "message": "Payment already verified."}
+        
+    reg.payment_status = "paid"
+    reg.payment_utr = req.razorpay_payment_id
+    db.commit()
+    
+    webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
+    try:
+        join_link = webinar.link if webinar and webinar.link else ""
+        time_str  = webinar.time if webinar else reg.date
+        background_tasks.add_task(
+            send_registration_confirmation_email,
+            reg.email,
+            reg.name,
+            reg.topic,
+            reg.date,
+            time_str,
+            join_link,
+            db
+        )
+    except Exception as e:
+        print(f"[PAYMENT VERIFY EMAIL] Failed to send confirmation email: {e}")
+        
+    return {"success": True, "message": "Payment verified and registration confirmed successfully!"}
+
+@app.post("/api/payment/webhook")
+async def razorpay_webhook(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    webhook_secret = get_setting(db, "razorpay_webhook_secret")
+    signature = request.headers.get("X-Razorpay-Signature")
+    
+    if not signature:
+        raise HTTPException(status_code=400, detail="Missing X-Razorpay-Signature header")
+        
+    body = await request.body()
+    try:
+        generated_signature = hmac.new(
+            webhook_secret.encode('utf-8'),
+            body,
+            hashlib.sha256
+        ).hexdigest()
+        
+        if not secrets.compare_digest(generated_signature, signature):
+            raise HTTPException(status_code=400, detail="Invalid webhook signature")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook signature validation error: {str(e)}")
+        
+    try:
+        event_data = json.loads(body.decode('utf-8'))
+        event = event_data.get("event")
+        
+        if event in ["order.paid", "payment.captured"]:
+            payload = event_data.get("payload", {})
+            payment = payload.get("payment", {}).get("entity", {})
+            order_id = payment.get("order_id")
+            payment_id = payment.get("id")
+            
+            notes = payment.get("notes", {})
+            reg_id = notes.get("registration_id")
+            
+            if not reg_id:
+                receipt = payload.get("order", {}).get("entity", {}).get("receipt", "")
+                if receipt.startswith("reg_"):
+                    try:
+                        reg_id = int(receipt.replace("reg_", ""))
+                    except ValueError:
+                        pass
+            
+            if reg_id:
+                reg = db.query(Registration).filter(Registration.id == reg_id).first()
+                if reg and reg.payment_status != "paid":
+                    reg.payment_status = "paid"
+                    reg.payment_utr = payment_id
+                    db.commit()
+                    
+                    webinar = db.query(Webinar).filter(Webinar.id == reg.webinar_id).first()
+                    try:
+                        join_link = webinar.link if webinar and webinar.link else ""
+                        time_str  = webinar.time if webinar else reg.date
+                        background_tasks.add_task(
+                            send_registration_confirmation_email,
+                            reg.email,
+                            reg.name,
+                            reg.topic,
+                            reg.date,
+                            time_str,
+                            join_link,
+                            db
+                        )
+                    except Exception as email_err:
+                        print(f"[WEBHOOK EMAIL] Failed: {email_err}")
+                    print(f"[WEBHOOK] Successfully confirmed payment for registration #{reg_id}")
+    except Exception as e:
+        print(f"[WEBHOOK ERROR] {e}")
+        
+    return {"status": "ok"}
+
 @app.post("/api/open-account")
 async def open_account(req: AccountOpeningReq, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     opening = AccountOpening(
@@ -1624,6 +1903,9 @@ SETTING_KEYS = [
     {"key": "smtp_host",             "label": "SMTP Host",                      "type": "text",     "hint": "smtp.gmail.com or smtp-relay.brevo.com"},
     {"key": "smtp_port",             "label": "SMTP Port",                      "type": "text",     "hint": "587 (TLS) or 465 (SSL)"},
     {"key": "reminder_lead_minutes", "label": "Reminder Lead Time (Minutes)",  "type": "text",     "hint": "Minutes before webinar starts to send email reminder. Default: 60"},
+    {"key": "razorpay_key_id",       "label": "Razorpay Key ID",               "type": "text",     "hint": "rzp_test_... or rzp_live_..."},
+    {"key": "razorpay_key_secret",   "label": "Razorpay Key Secret",           "type": "password", "hint": "Razorpay API Key Secret"},
+    {"key": "razorpay_webhook_secret","label": "Razorpay Webhook Secret",       "type": "password", "hint": "Secret used to verify Razorpay webhooks"},
 ]
 
 @app.get("/api/admin/settings")
@@ -1752,6 +2034,358 @@ async def webinar_reminder_daemon():
             break
         except Exception as e:
             print(f"[REMINDER DAEMON] Error: {e}")
+
+# ─── CRM CLIENT ENDPOINTS ────────────────────────────────
+@app.post("/api/crm/client/login")
+async def crm_client_login(req: ClientLoginReq, db: Session = Depends(get_db)):
+    client = db.query(CRMClient).filter(CRMClient.username == req.username).first()
+    if not client or client.password_raw != req.password:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    if client.status != "Active":
+        raise HTTPException(status_code=403, detail="Your CRM account has been deactivated.")
+    return {
+        "id": client.id,
+        "name": client.name,
+        "username": client.username,
+        "email": client.email,
+        "phone": client.phone,
+        "pan": client.pan,
+        "dob": client.dob,
+        "address": client.address,
+        "rm_name": client.rm_name,
+        "status": client.status,
+    }
+
+@app.get("/api/crm/client/dashboard")
+async def crm_client_dashboard(current_client: CRMClient = Depends(authenticate_crm_client), db: Session = Depends(get_db)):
+    holdings = db.query(CRMPortfolio).filter(CRMPortfolio.client_username == current_client.username).all()
+    tasks = db.query(CRMTask).filter(CRMTask.client_username == current_client.username).all()
+    
+    formatted_tasks = []
+    for t in tasks:
+        formatted_tasks.append({
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "type": t.type,
+            "status": t.status,
+            "due_date": t.due_date.isoformat() if t.due_date else None,
+            "created_at": t.created_at.isoformat()
+        })
+        
+    return {
+        "client": {
+            "name": current_client.name,
+            "username": current_client.username,
+            "email": current_client.email,
+            "phone": current_client.phone,
+            "pan": current_client.pan,
+            "dob": current_client.dob,
+            "address": current_client.address,
+            "rm_name": current_client.rm_name,
+            "status": current_client.status,
+        },
+        "holdings": [{
+            "id": h.id,
+            "scheme_name": h.scheme_name,
+            "folio_number": h.folio_number,
+            "units": h.units,
+            "purchase_price": h.purchase_price,
+            "current_nav": h.current_nav,
+            "current_value": h.current_value,
+            "asset_class": h.asset_class,
+            "updated_at": h.updated_at.isoformat()
+        } for h in holdings],
+        "tasks": formatted_tasks
+    }
+
+# ─── ADMIN CRM DASHBOARD OVERVIEW ─────────────────────────
+@app.get("/api/admin/crm/dashboard")
+async def get_admin_crm_dashboard(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    now = datetime.datetime.utcnow()
+    today_start = datetime.datetime(now.year, now.month, now.day)
+    today_end = today_start + datetime.timedelta(days=1)
+    
+    # 1. Tasks stats
+    overdue_count = db.query(CRMTask).filter(CRMTask.status == "Pending", CRMTask.due_date < today_start).count()
+    due_today_count = db.query(CRMTask).filter(CRMTask.status == "Pending", CRMTask.due_date >= today_start, CRMTask.due_date < today_end).count()
+    upcoming_count = db.query(CRMTask).filter(CRMTask.status == "Pending", CRMTask.due_date >= today_end).count()
+    total_unresolved = db.query(CRMTask).filter(CRMTask.status == "Pending").count()
+    
+    # Task type breakup for donut chart
+    tasks = db.query(CRMTask).filter(CRMTask.status == "Pending").all()
+    task_types = {"Call": 0, "Meeting": 0, "Email": 0, "Task": 0}
+    for t in tasks:
+        if t.type in task_types:
+            task_types[t.type] += 1
+            
+    # 2. Leads stats
+    leads = db.query(CRMLead).all()
+    lead_status_counts = {
+        "Contacted": 0,
+        "Interested": 0,
+        "Qualified": 0,
+        "Converted": 0,
+        "Lost": 0
+    }
+    
+    # Count leads received today
+    received_today = db.query(CRMLead).filter(CRMLead.created_at >= today_start).count()
+    converted_today = db.query(CRMLead).filter(CRMLead.status == "Converted", CRMLead.created_at >= today_start).count()
+    total_pending_leads = db.query(CRMLead).filter(CRMLead.status != "Converted", CRMLead.status != "Lost").count()
+    
+    for l in leads:
+        if l.status in lead_status_counts:
+            lead_status_counts[l.status] += 1
+            
+    # Calculate Total Portfolio AUM
+    total_aum = db.query(CRMPortfolio).with_entities(CRMPortfolio.current_value).all()
+    sum_aum = sum(h[0] for h in total_aum if h[0])
+    
+    return {
+        "tasks": {
+            "overdue": overdue_count,
+            "due_today": due_today_count,
+            "upcoming": upcoming_count,
+            "total_unresolved": total_unresolved,
+            "breakup": task_types
+        },
+        "leads": {
+            "received_today": received_today,
+            "converted_today": converted_today,
+            "total_pending": total_pending_leads,
+            "breakup": lead_status_counts
+        },
+        "total_aum": sum_aum,
+        "total_clients": db.query(CRMClient).count()
+    }
+
+# ─── ADMIN CRM CLIENTS CRUD ──────────────────────────────
+@app.get("/api/admin/crm/clients")
+async def list_admin_crm_clients(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    clients = db.query(CRMClient).all()
+    result = []
+    for c in clients:
+        # Sum AUM
+        portfolio_sum = db.query(CRMPortfolio).filter(CRMPortfolio.client_username == c.username).all()
+        aum = sum(h.current_value for h in portfolio_sum if h.current_value)
+        result.append({
+            "id": c.id,
+            "name": c.name,
+            "username": c.username,
+            "password_raw": c.password_raw,
+            "email": c.email,
+            "phone": c.phone,
+            "pan": c.pan,
+            "dob": c.dob,
+            "address": c.address,
+            "rm_name": c.rm_name,
+            "status": c.status,
+            "aum": aum,
+            "created_at": c.created_at.isoformat()
+        })
+    return result
+
+@app.post("/api/admin/crm/clients")
+async def create_or_update_crm_client(req: CRMClientCreateReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    client = db.query(CRMClient).filter(CRMClient.username == req.username).first()
+    if client:
+        # Update
+        client.name = req.name
+        client.password_raw = req.password_raw
+        client.email = req.email
+        client.phone = req.phone
+        client.pan = req.pan
+        client.dob = req.dob
+        client.address = req.address
+        client.rm_name = req.rm_name
+        client.status = req.status
+    else:
+        # Create
+        client = CRMClient(
+            name=req.name,
+            username=req.username,
+            password_raw=req.password_raw,
+            email=req.email,
+            phone=req.phone,
+            pan=req.pan,
+            dob=req.dob,
+            address=req.address,
+            rm_name=req.rm_name,
+            status=req.status
+        )
+        db.add(client)
+    db.commit()
+    return {"success": True, "username": client.username}
+
+@app.delete("/api/admin/crm/clients/{client_id}")
+async def delete_crm_client(client_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    client = db.query(CRMClient).filter(CRMClient.id == client_id).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Also clean up their holdings and tasks
+    db.query(CRMPortfolio).filter(CRMPortfolio.client_username == client.username).delete()
+    db.query(CRMTask).filter(CRMTask.client_username == client.username).delete()
+    
+    db.delete(client)
+    db.commit()
+    return {"success": True}
+
+@app.get("/api/admin/crm/clients/{client_username}/details")
+async def get_crm_client_details(client_username: str, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    client = db.query(CRMClient).filter(CRMClient.username == client_username).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+        
+    holdings = db.query(CRMPortfolio).filter(CRMPortfolio.client_username == client_username).all()
+    tasks = db.query(CRMTask).filter(CRMTask.client_username == client_username).all()
+    
+    formatted_tasks = []
+    for t in tasks:
+        formatted_tasks.append({
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "type": t.type,
+            "status": t.status,
+            "due_date": t.due_date.isoformat() if t.due_date else None,
+            "created_at": t.created_at.isoformat()
+        })
+        
+    return {
+        "holdings": [{
+            "id": h.id,
+            "scheme_name": h.scheme_name,
+            "folio_number": h.folio_number,
+            "units": h.units,
+            "purchase_price": h.purchase_price,
+            "current_nav": h.current_nav,
+            "current_value": h.current_value,
+            "asset_class": h.asset_class,
+            "updated_at": h.updated_at.isoformat()
+        } for h in holdings],
+        "tasks": formatted_tasks
+    }
+
+# ─── ADMIN CRM HOLDINGS CRUD ────────────────────────────
+@app.post("/api/admin/crm/clients/{client_username}/holdings")
+async def add_or_update_crm_holding(client_username: str, req: CRMPortfolioReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    # Calculate current value
+    val = req.units * req.current_nav
+    holding = CRMPortfolio(
+        client_username=client_username,
+        scheme_name=req.scheme_name,
+        folio_number=req.folio_number,
+        units=req.units,
+        purchase_price=req.purchase_price,
+        current_nav=req.current_nav,
+        current_value=val,
+        asset_class=req.asset_class
+    )
+    db.add(holding)
+    db.commit()
+    return {"success": True, "id": holding.id}
+
+@app.delete("/api/admin/crm/clients/holdings/{holding_id}")
+async def delete_crm_holding(holding_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    holding = db.query(CRMPortfolio).filter(CRMPortfolio.id == holding_id).first()
+    if not holding:
+        raise HTTPException(status_code=404, detail="Holding record not found")
+    db.delete(holding)
+    db.commit()
+    return {"success": True}
+
+# ─── ADMIN CRM TASKS CRUD ───────────────────────────────
+@app.post("/api/admin/crm/clients/{client_username}/tasks")
+async def add_crm_task(client_username: str, req: CRMTaskReq, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    due = None
+    if req.due_date:
+        try:
+            # Parse ISO string
+            due = datetime.datetime.fromisoformat(req.due_date.replace("Z", ""))
+        except Exception:
+            pass
+            
+    task = CRMTask(
+        client_username=client_username,
+        title=req.title,
+        description=req.description or "",
+        type=req.type or "Call",
+        status=req.status or "Pending",
+        due_date=due
+    )
+    db.add(task)
+    db.commit()
+    return {"success": True, "id": task.id}
+
+@app.post("/api/admin/crm/tasks/{task_id}/toggle")
+async def toggle_crm_task_status(task_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    task = db.query(CRMTask).filter(CRMTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    task.status = "Completed" if task.status == "Pending" else "Pending"
+    db.commit()
+    return {"success": True, "new_status": task.status}
+
+@app.delete("/api/admin/crm/tasks/{task_id}")
+async def delete_crm_task(task_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    task = db.query(CRMTask).filter(CRMTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    db.delete(task)
+    db.commit()
+    return {"success": True}
+
+# ─── ADMIN CRM LEADS CRUD ───────────────────────────────
+@app.get("/api/admin/crm/leads")
+async def list_admin_crm_leads(username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    leads = db.query(CRMLead).order_by(CRMLead.created_at.desc()).all()
+    return [{
+        "id": l.id,
+        "name": l.name,
+        "email": l.email,
+        "phone": l.phone,
+        "source": l.source,
+        "status": l.status,
+        "remarks": l.remarks,
+        "created_at": l.created_at.isoformat()
+    } for l in leads]
+
+@app.post("/api/admin/crm/leads")
+async def create_or_update_crm_lead(req: CRMLeadReq, lead_id: Optional[int] = None, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    if lead_id:
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        lead.name = req.name
+        lead.email = req.email
+        lead.phone = req.phone
+        lead.source = req.source
+        lead.status = req.status
+        lead.remarks = req.remarks
+    else:
+        lead = CRMLead(
+            name=req.name,
+            email=req.email,
+            phone=req.phone,
+            source=req.source,
+            status=req.status,
+            remarks=req.remarks
+        )
+        db.add(lead)
+    db.commit()
+    return {"success": True, "id": lead.id}
+
+@app.delete("/api/admin/crm/leads/{lead_id}")
+async def delete_crm_lead(lead_id: int, username: str = Depends(authenticate_admin), db: Session = Depends(get_db)):
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    db.delete(lead)
+    db.commit()
+    return {"success": True}
+
 
 @app.on_event("startup")
 async def startup_event():

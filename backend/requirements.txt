@@ -6,3 +6,4 @@ python-multipart
 sqlalchemy
 user-agents
 psycopg2-binary
+razorpay

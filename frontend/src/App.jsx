@@ -193,6 +193,7 @@ const navItems = [
   { label: 'Services Hub', href: '#hub' },
   { label: 'Journey', href: '#journey' },
   { label: 'About Us', href: '#about' },
+  { label: 'CRM', href: '#crm' },
   { label: 'Contact', href: '#contact' },
 ];
 
@@ -217,8 +218,9 @@ function Navbar({ activePage, onOpenAccountClick }) {
             const path = n.href.replace('#', '');
             const isActive = activePage === path;
             return (
-              <a key={n.label} href={n.href} className={isActive ? 'active' : ''}>
+              <a key={n.label} href={n.href} className={isActive ? 'active' : ''} style={{ display: 'inline-flex', alignItems: 'center' }}>
                 {n.label}
+                {n.label === 'CRM' && <span className="crm-nav-new-badge">New</span>}
               </a>
             );
           })}
@@ -235,8 +237,9 @@ function Navbar({ activePage, onOpenAccountClick }) {
         {menuOpen && (
           <motion.div className="mobile-menu" initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3 }}>
             {navItems.map(n => (
-              <a key={n.label} href={n.href} className={activePage === n.href.replace('#', '') ? 'active' : ''} onClick={() => setMenuOpen(false)}>
+              <a key={n.label} href={n.href} className={activePage === n.href.replace('#', '') ? 'active' : ''} onClick={() => setMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {n.label}
+                {n.label === 'CRM' && <span className="crm-nav-new-badge" style={{ marginLeft: '6px' }}>New</span>}
               </a>
             ))}
             <button className="btn-solid mobile-btn" onClick={() => { setMenuOpen(false); onOpenAccountClick(); }} style={{ border: 'none', cursor: 'pointer' }}>Open Account</button>
@@ -3253,6 +3256,1157 @@ function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
 }
 
 /* ═══════════════════════════════════════════════
+   10b. CLIENT CRM LOGIN & DASHBOARD PAGE
+   ═══════════════════════════════════════════════ */
+function CRMClientPage() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [clientData, setClientData] = useState(null);
+  const [activeTab, setActiveTab] = useState('portfolio');
+  const [authHeader, setAuthHeader] = useState(() => localStorage.getItem('scsl_crm_auth') || null);
+
+  const fetchDashboard = async (auth) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/crm/client/dashboard`, {
+        headers: { 'Authorization': auth }
+      });
+      if (res.status === 401) {
+        localStorage.removeItem('scsl_crm_auth');
+        setAuthHeader(null);
+        setError('Session expired or invalid credentials.');
+      } else if (!res.ok) {
+        throw new Error('Failed to fetch CRM data.');
+      } else {
+        const data = await res.json();
+        setClientData(data);
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Could not connect to backend server. Make sure the server is online.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authHeader) {
+      fetchDashboard(authHeader);
+    }
+  }, [authHeader]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/crm/client/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        const auth = 'Basic ' + btoa(username + ':' + password);
+        localStorage.setItem('scsl_crm_auth', auth);
+        setAuthHeader(auth);
+      } else {
+        const errData = await res.json();
+        setError(errData.detail || 'Invalid username or password.');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Could not connect to backend server.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('scsl_crm_auth');
+    setAuthHeader(null);
+    setClientData(null);
+    setUsername('');
+    setPassword('');
+    setError('');
+  };
+
+  if (!authHeader || !clientData) {
+    return (
+      <section className="crm-login-container">
+        <motion.div 
+          className="crm-login-card"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+            <img src="https://www.steelcitynettrade.com/images/Steelcity-logo.png" alt="SCSL Logo" style={{ height: '40px', marginBottom: '15px' }} />
+            <h2 style={{ color: 'var(--navy)', fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px 0' }}>Client CRM Access</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: 0 }}>View your mutual fund portfolio and advisor advisory logs</p>
+          </div>
+
+          {error && (
+            <div style={{ background: '#FEE2E2', color: 'var(--red)', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '18px', fontWeight: 500 }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="crm-form-group">
+              <label>CRM Username</label>
+              <input 
+                type="text" 
+                className="crm-form-control" 
+                placeholder="Enter CRM username" 
+                required 
+                value={username} 
+                onChange={e => setUsername(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>CRM Password</label>
+              <input 
+                type="password" 
+                className="crm-form-control" 
+                placeholder="Enter CRM password" 
+                required 
+                value={password} 
+                onChange={e => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <button 
+              type="submit" 
+              className="crm-btn-primary" 
+              style={{ width: '100%', padding: '12px', fontSize: '0.95rem', marginTop: '10px' }}
+              disabled={loading}
+            >
+              {loading ? 'Verifying Account...' : 'Access CRM Dashboard'}
+            </button>
+          </form>
+        </motion.div>
+      </section>
+    );
+  }
+
+  const { client, holdings, tasks } = clientData;
+  const totalValuation = holdings.reduce((sum, h) => sum + h.current_value, 0);
+  const totalInvested = holdings.reduce((sum, h) => sum + (h.units * h.purchase_price), 0);
+  const netGain = totalValuation - totalInvested;
+  const gainPercent = totalInvested > 0 ? (netGain / totalInvested) * 100 : 0;
+
+  return (
+    <section className="crm-dashboard-container">
+      <div className="container">
+        
+        {/* Welcome Banner */}
+        <div className="crm-welcome-banner">
+          <div>
+            <h1 className="crm-welcome-title">Good Morning, {client.name}</h1>
+            <p className="crm-welcome-subtitle">Welcome back to your Steel City CRM workspace. Here is your portfolio summary.</p>
+          </div>
+          <button className="crm-btn-primary" onClick={handleLogout} style={{ background: 'transparent', border: '1.5px solid rgba(255,255,255,0.3)' }}>Log Out</button>
+        </div>
+
+        {/* Core Stats */}
+        <div className="crm-grid-3">
+          <div className="crm-card">
+            <h3 className="crm-card-title">Portfolio Valuation (AUM)</h3>
+            <div className="crm-card-val">₹{totalValuation.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+            <p className="crm-card-sub">Updated dynamically | NAV Date: Today</p>
+          </div>
+          <div className="crm-card">
+            <h3 className="crm-card-title">Net Gains / Returns</h3>
+            <div className="crm-card-val" style={{ color: netGain >= 0 ? 'var(--emerald)' : 'var(--rose)' }}>
+              {netGain >= 0 ? '+' : ''}₹{netGain.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+            </div>
+            <p className="crm-card-sub" style={{ color: netGain >= 0 ? 'var(--emerald)' : 'var(--rose)', fontWeight: 700 }}>
+              {netGain >= 0 ? '▲' : '▼'} {gainPercent.toFixed(2)}% absolute returns
+            </p>
+          </div>
+          <div className="crm-card">
+            <h3 className="crm-card-title">My Adviser Profile</h3>
+            <div style={{ marginTop: '10px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--navy)' }}>RM Name: {client.rm_name}</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--muted)', marginTop: '4px' }}>Status: <span style={{ color: 'var(--emerald)', fontWeight: 700 }}>● Active Investor</span></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs Manager */}
+        <div className="crm-tabs-container">
+          <div className="crm-tabs-header">
+            <button className={`crm-tab-btn ${activeTab === 'portfolio' ? 'active' : ''}`} onClick={() => setActiveTab('portfolio')}>
+              💼 My Asset Holdings
+            </button>
+            <button className={`crm-tab-btn ${activeTab === 'tasks' ? 'active' : ''}`} onClick={() => setActiveTab('tasks')}>
+              🔔 Advisory & Interactions
+            </button>
+            <button className={`crm-tab-btn ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}>
+              👤 My Account Details
+            </button>
+          </div>
+
+          <div className="crm-tab-content">
+            {activeTab === 'portfolio' && (
+              <div>
+                <h3 className="crm-section-title">Mutual Fund & Equity Holdings</h3>
+                {holdings.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>No holdings recorded. Please contact your Relationship Manager to upload transaction data.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="crm-table">
+                      <thead>
+                        <tr>
+                          <th>Scheme / Stock Name</th>
+                          <th>Folio No</th>
+                          <th>Asset Class</th>
+                          <th>Units Held</th>
+                          <th>Buy NAV</th>
+                          <th>Current NAV</th>
+                          <th>Invested Val</th>
+                          <th>Current Val</th>
+                          <th>Gain/Loss</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {holdings.map(h => {
+                          const cost = h.units * h.purchase_price;
+                          const gain = h.current_value - cost;
+                          return (
+                            <tr key={h.id}>
+                              <td style={{ fontWeight: 700, color: 'var(--navy)' }}>{h.scheme_name}</td>
+                              <td>{h.folio_number}</td>
+                              <td><span style={{ fontSize: '0.8rem', background: '#e2e8f0', padding: '3px 8px', borderRadius: '12px', fontWeight: 600 }}>{h.asset_class}</span></td>
+                              <td>{h.units.toFixed(3)}</td>
+                              <td>₹{h.purchase_price.toFixed(2)}</td>
+                              <td>₹{h.current_nav.toFixed(2)}</td>
+                              <td>₹{cost.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                              <td style={{ fontWeight: 800 }}>₹{h.current_value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                              <td style={{ fontWeight: 700, color: gain >= 0 ? 'var(--emerald)' : 'var(--rose)' }}>
+                                {gain >= 0 ? '+' : ''}{((gain / cost) * 100).toFixed(1)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div>
+                <h3 className="crm-section-title">Advisor Call Logs & Advisory Actions</h3>
+                {tasks.length === 0 ? (
+                  <div style={{ padding: '30px', textAlign: 'center', color: 'var(--muted)' }}>No follow-up calls or tasks scheduled.</div>
+                ) : (
+                  <div className="crm-timeline">
+                    {tasks.map(t => (
+                      <div className="crm-timeline-item" key={t.id}>
+                        <div className={`crm-timeline-badge ${t.type.toLowerCase()}`}>
+                          {t.type === 'Call' && <PhoneCall size={16} />}
+                          {t.type === 'Meeting' && <Users size={16} />}
+                          {t.type === 'Email' && <Mail size={16} />}
+                          {t.type === 'Task' && <Briefcase size={16} />}
+                        </div>
+                        <div className="crm-timeline-content">
+                          <div className="crm-timeline-title">
+                            <span>{t.title}</span>
+                            <span style={{ 
+                              fontSize: '0.78rem', 
+                              padding: '2px 8px', 
+                              borderRadius: '12px', 
+                              background: t.status === 'Completed' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+                              color: t.status === 'Completed' ? '#059669' : '#d97706',
+                              fontWeight: 700
+                            }}>{t.status}</span>
+                          </div>
+                          <p className="crm-timeline-desc">{t.description}</p>
+                          <div className="crm-timeline-meta">
+                            <span>Due Date: {t.due_date ? new Date(t.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Flexible'}</span>
+                            <span>●</span>
+                            <span>Type: {t.type}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'profile' && (
+              <div>
+                <h3 className="crm-section-title">Personal CRM Information</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginTop: '10px' }}>
+                  <div className="crm-card" style={{ boxShadow: 'none', border: '1px solid #f1f5f9' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--navy)' }}>Contact Details</h4>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>Email:</strong> {client.email}</p>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>Phone:</strong> {client.phone}</p>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>Address:</strong> {client.address || 'N/A'}</p>
+                  </div>
+                  <div className="crm-card" style={{ boxShadow: 'none', border: '1px solid #f1f5f9' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--navy)' }}>Tax & Registry</h4>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>PAN Card:</strong> {client.pan || 'N/A'}</p>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>Date of Birth:</strong> {client.dob || 'N/A'}</p>
+                    <p style={{ margin: '6px 0', fontSize: '0.9rem' }}><strong>Account Status:</strong> <span style={{ color: 'var(--emerald)', fontWeight: 700 }}>{client.status}</span></p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   10c. ADMIN CRM SUITE COMPONENT
+   ═══════════════════════════════════════════════ */
+function AdminCRMTab({ authHeader }) {
+  const [crmSubTab, setCrmSubTab] = useState('dashboard');
+  const [dashboardData, setDashboardData] = useState(null);
+  const [clients, setClients] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientDetails, setClientDetails] = useState({ holdings: [], tasks: [] });
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Form states
+  // Client Create/Edit
+  const [cName, setCName] = useState('');
+  const [cUsername, setCUsername] = useState('');
+  const [cPassword, setCPassword] = useState('');
+  const [cEmail, setCEmail] = useState('');
+  const [cPhone, setCPhone] = useState('');
+  const [cPan, setCPan] = useState('');
+  const [cDob, setCDob] = useState('');
+  const [cAddress, setCAddress] = useState('');
+  const [cRm, setCRm] = useState('mukeshrm');
+  const [cStatus, setCStatus] = useState('Active');
+  
+  // Holdings
+  const [hScheme, setHScheme] = useState('');
+  const [hFolio, setHFolio] = useState('');
+  const [hUnits, setHUnits] = useState('');
+  const [hPrice, setHPrice] = useState('');
+  const [hNav, setHNav] = useState('');
+  const [hAsset, setHAsset] = useState('Equity');
+
+  // Tasks
+  const [tTitle, setTTitle] = useState('');
+  const [tDesc, setTDesc] = useState('');
+  const [tType, setTType] = useState('Call');
+  const [tDue, setTDue] = useState('');
+
+  // Leads
+  const [lName, setLName] = useState('');
+  const [lEmail, setLEmail] = useState('');
+  const [lPhone, setLPhone] = useState('');
+  const [lSource, setLSource] = useState('Website');
+  const [lStatus, setLStatus] = useState('Contacted');
+  const [lRemarks, setLRemarks] = useState('');
+
+  const fetchDashboardData = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/dashboard`, {
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDashboardData(data);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchClients = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients`, {
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClients(data);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchLeads = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/leads`, {
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLeads(data);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchClientDetails = async (username) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients/${username}/details`, {
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setClientDetails(data);
+      }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    fetchClients();
+    fetchLeads();
+  }, []);
+
+  const handleSelectClient = (c) => {
+    setSelectedClient(c);
+    if (c) {
+      fetchClientDetails(c.username);
+      // Pre-fill edit client inputs
+      setCName(c.name);
+      setCUsername(c.username);
+      setCPassword(c.password_raw);
+      setCEmail(c.email);
+      setCPhone(c.phone);
+      setCPan(c.pan || '');
+      setCDob(c.dob || '');
+      setCAddress(c.address || '');
+      setCRm(c.rm_name || 'mukeshrm');
+      setCStatus(c.status || 'Active');
+    }
+  };
+
+  const handleCreateClient = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({
+          name: cName, username: cUsername, password_raw: cPassword,
+          email: cEmail, phone: cPhone, pan: cPan, dob: cDob,
+          address: cAddress, rm_name: cRm, status: cStatus
+        })
+      });
+      if (res.ok) {
+        alert('Client details saved successfully!');
+        fetchClients();
+        setSelectedClient(null);
+        // Reset inputs
+        setCName(''); setCUsername(''); setCPassword(''); setCEmail(''); setCPhone('');
+        setCPan(''); setCDob(''); setCAddress(''); setCRm('mukeshrm'); setCStatus('Active');
+      } else {
+        alert('Failed to save client details.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error connecting to database.');
+    }
+  };
+
+  const handleDeleteClient = async (id) => {
+    if (!window.confirm('Delete this client profile? All portfolio and task logs will be lost permanently.')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        alert('Client profile deleted.');
+        setSelectedClient(null);
+        fetchClients();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleAddHolding = async (e) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients/${selectedClient.username}/holdings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({
+          scheme_name: hScheme,
+          folio_number: hFolio,
+          units: parseFloat(hUnits),
+          purchase_price: parseFloat(hPrice),
+          current_nav: parseFloat(hNav),
+          asset_class: hAsset
+        })
+      });
+      if (res.ok) {
+        alert('Asset holding added successfully.');
+        fetchClientDetails(selectedClient.username);
+        fetchClients(); // refresh overall AUM in list
+        // Reset holding form
+        setHScheme(''); setHFolio(''); setHUnits(''); setHPrice(''); setHNav('');
+      } else {
+        alert('Failed to add holding record.');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteHolding = async (id) => {
+    if (!window.confirm('Delete this holding record?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients/holdings/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        fetchClientDetails(selectedClient.username);
+        fetchClients();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleAddTask = async (e) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/clients/${selectedClient.username}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({
+          title: tTitle,
+          description: tDesc,
+          type: tType,
+          status: 'Pending',
+          due_date: tDue ? new Date(tDue).toISOString() : null
+        })
+      });
+      if (res.ok) {
+        alert('Interaction / task scheduled.');
+        fetchClientDetails(selectedClient.username);
+        fetchDashboardData();
+        setTTitle(''); setTDesc(''); setTType('Call'); setTDue('');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleToggleTask = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/tasks/${id}/toggle`, {
+        method: 'POST',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        fetchClientDetails(selectedClient.username);
+        fetchDashboardData();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteTask = async (id) => {
+    if (!window.confirm('Delete this task?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/tasks/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        fetchClientDetails(selectedClient.username);
+        fetchDashboardData();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleSaveLead = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+        body: JSON.stringify({
+          name: lName, email: lEmail, phone: lPhone,
+          source: lSource, status: lStatus, remarks: lRemarks
+        })
+      });
+      if (res.ok) {
+        alert('Lead registered.');
+        fetchLeads();
+        fetchDashboardData();
+        setLName(''); setLEmail(''); setLPhone(''); setLRemarks('');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteLead = async (id) => {
+    if (!window.confirm('Delete this lead?')) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/crm/leads/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': authHeader }
+      });
+      if (res.ok) {
+        fetchLeads();
+        fetchDashboardData();
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const filteredClients = clients.filter(c => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.phone.includes(searchQuery)
+  );
+
+  return (
+    <div className="admin-crm-workspace">
+      
+      {/* Sidebar navigation */}
+      <div className="admin-crm-sidebar">
+        <div className="admin-crm-sidebar-header">
+          <div className="admin-crm-sidebar-title">Adviser CRM Console</div>
+        </div>
+        <button className={`admin-crm-nav-btn ${crmSubTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCrmSubTab('dashboard')}>
+          📊 CRM Dashboard
+        </button>
+        <button className={`admin-crm-nav-btn ${crmSubTab === 'leads' ? 'active' : ''}`} onClick={() => setCrmSubTab('leads')}>
+          👤 Leads Manager
+        </button>
+        <button className={`admin-crm-nav-btn ${crmSubTab === 'clients' ? 'active' : ''}`} onClick={() => { setCrmSubTab('clients'); handleSelectClient(null); }}>
+          👥 Clients &amp; Portfolios
+        </button>
+      </div>
+
+      {/* Main Workspace content */}
+      <div className="admin-crm-content">
+        
+        {crmSubTab === 'dashboard' && dashboardData && (
+          <div>
+            <h2 className="crm-section-title" style={{ fontSize: '1.5rem', marginBottom: '8px' }}>CRM Business Analytics</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '0.9rem', margin: '0 0 25px 0' }}>Overall advisory overview, total client valuations, and follow-up activities.</p>
+
+            <div className="crm-grid-3">
+              <div className="crm-card" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
+                <h3 className="crm-card-title">Total Managed AUM</h3>
+                <div className="crm-card-val" style={{ color: 'var(--blue)' }}>₹{dashboardData.total_aum.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                <p className="crm-card-sub" style={{ color: '#2563eb', fontWeight: 600 }}>Total asset valuation under advice</p>
+              </div>
+              <div className="crm-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0' }}>
+                <h3 className="crm-card-title">Advisory Clients</h3>
+                <div className="crm-card-val" style={{ color: '#059669' }}>{dashboardData.total_clients}</div>
+                <p className="crm-card-sub" style={{ color: '#059669', fontWeight: 600 }}>Registered portal client accounts</p>
+              </div>
+              <div className="crm-card" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                <h3 className="crm-card-title">Open Activities</h3>
+                <div className="crm-card-val" style={{ color: '#d97706' }}>{dashboardData.tasks.total_unresolved}</div>
+                <p className="crm-card-sub" style={{ color: '#d97706', fontWeight: 600 }}>Pending follow-up actions</p>
+              </div>
+            </div>
+
+            <div className="crm-dashboard-row">
+              
+              {/* TASKS BREAKDOWN (Donut Representation) */}
+              <div className="crm-widget-card">
+                <div className="crm-widget-header">
+                  <h3 className="crm-widget-title">Tasks Overview</h3>
+                  <span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 10px', borderRadius: '12px', fontWeight: 700 }}>Unresolved</span>
+                </div>
+                <div className="crm-sub-grid-3" style={{ marginBottom: '15px' }}>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label" style={{ color: 'var(--rose)' }}>Overdue</div>
+                    <div className="crm-mini-stat-val" style={{ color: 'var(--rose)' }}>{dashboardData.tasks.overdue}</div>
+                  </div>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label" style={{ color: 'var(--amber)' }}>Due Today</div>
+                    <div className="crm-mini-stat-val" style={{ color: 'var(--amber)' }}>{dashboardData.tasks.due_today}</div>
+                  </div>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label" style={{ color: 'var(--blue)' }}>Upcoming</div>
+                    <div className="crm-mini-stat-val" style={{ color: 'var(--blue)' }}>{dashboardData.tasks.upcoming}</div>
+                  </div>
+                </div>
+
+                <div className="crm-chart-container">
+                  <div className="crm-donut-wrapper">
+                    <svg viewBox="0 0 36 36" className="crm-chart-svg" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="#e2e8f0" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" strokeWidth="3" 
+                        strokeDasharray={`${(dashboardData.tasks.breakup.Call / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100} ${100 - (dashboardData.tasks.breakup.Call / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} 
+                        strokeDashoffset="0" />
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" strokeWidth="3" 
+                        strokeDasharray={`${(dashboardData.tasks.breakup.Meeting / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100} ${100 - (dashboardData.tasks.breakup.Meeting / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} 
+                        strokeDashoffset={`-${(dashboardData.tasks.breakup.Call / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} />
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f59e0b" strokeWidth="3" 
+                        strokeDasharray={`${(dashboardData.tasks.breakup.Email / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100} ${100 - (dashboardData.tasks.breakup.Email / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} 
+                        strokeDashoffset={`-${((dashboardData.tasks.breakup.Call + dashboardData.tasks.breakup.Meeting) / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} />
+                      <circle cx="18" cy="18" r="15.915" fill="none" stroke="#a855f7" strokeWidth="3" 
+                        strokeDasharray={`${(dashboardData.tasks.breakup.Task / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100} ${100 - (dashboardData.tasks.breakup.Task / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} 
+                        strokeDashoffset={`-${((dashboardData.tasks.breakup.Call + dashboardData.tasks.breakup.Meeting + dashboardData.tasks.breakup.Email) / Math.max(dashboardData.tasks.total_unresolved, 1)) * 100}`} />
+                    </svg>
+                    <div className="crm-donut-center">
+                      <div className="crm-donut-center-val">{dashboardData.tasks.total_unresolved}</div>
+                      <div className="crm-donut-center-lbl">Total Tasks</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="crm-chart-legend">
+                  <div className="crm-legend-item"><span className="crm-legend-dot" style={{ background: '#3b82f6' }}></span> Calls ({dashboardData.tasks.breakup.Call})</div>
+                  <div className="crm-legend-item"><span className="crm-legend-dot" style={{ background: '#10b981' }}></span> Meetings ({dashboardData.tasks.breakup.Meeting})</div>
+                  <div className="crm-legend-item"><span className="crm-legend-dot" style={{ background: '#f59e0b' }}></span> Emails ({dashboardData.tasks.breakup.Email})</div>
+                  <div className="crm-legend-item"><span className="crm-legend-dot" style={{ background: '#a855f7' }}></span> Tasks ({dashboardData.tasks.breakup.Task})</div>
+                </div>
+              </div>
+
+              {/* LEADS BREAKUP (Investwell Replicating List) */}
+              <div className="crm-widget-card">
+                <div className="crm-widget-header">
+                  <h3 className="crm-widget-title">Leads Funnel</h3>
+                  <span style={{ fontSize: '0.8rem', background: '#f1f5f9', padding: '4px 10px', borderRadius: '12px', fontWeight: 700 }}>Sales pipeline</span>
+                </div>
+                <div className="crm-sub-grid-3" style={{ marginBottom: '15px' }}>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label">Received Today</div>
+                    <div className="crm-mini-stat-val">{dashboardData.leads.received_today}</div>
+                  </div>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label" style={{ color: 'var(--emerald)' }}>Won Today</div>
+                    <div className="crm-mini-stat-val" style={{ color: 'var(--emerald)' }}>{dashboardData.leads.converted_today}</div>
+                  </div>
+                  <div className="crm-mini-stat">
+                    <div className="crm-mini-stat-label">Total Active</div>
+                    <div className="crm-mini-stat-val">{dashboardData.leads.total_pending}</div>
+                  </div>
+                </div>
+
+                <div>
+                  {Object.entries(dashboardData.leads.breakup).map(([statusName, val]) => {
+                    const totalLeads = leads.length || 1;
+                    const percent = (val / totalLeads) * 100;
+                    let color = '#3b82f6';
+                    if (statusName === 'Interested') color = '#f59e0b';
+                    if (statusName === 'Qualified') color = '#a855f7';
+                    if (statusName === 'Converted') color = '#10b981';
+                    if (statusName === 'Lost') color = '#ef4444';
+
+                    return (
+                      <div className="crm-progress-item" key={statusName}>
+                        <div className="crm-progress-header">
+                          <span>{statusName}</span>
+                          <span>{val} ({percent.toFixed(0)}%)</span>
+                        </div>
+                        <div className="crm-progress-bar">
+                          <div className="crm-progress-fill" style={{ width: `${percent}%`, background: color }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {crmSubTab === 'leads' && (
+          <div>
+            <h2 className="crm-section-title">Leads Funnel &amp; Register</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '30px' }}>
+              
+              {/* Leads Table */}
+              <div className="crm-card" style={{ padding: '20px' }}>
+                <h4 style={{ margin: '0 0 15px 0', color: 'var(--navy)' }}>Inbound Lead Records</h4>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="crm-table">
+                    <thead>
+                      <tr>
+                        <th>Lead Name</th>
+                        <th>Contact</th>
+                        <th>Source</th>
+                        <th>Status</th>
+                        <th>Remarks</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.length === 0 ? (
+                        <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: 'var(--muted)' }}>No leads registered. Add one using the form on the right.</td></tr>
+                      ) : leads.map(l => (
+                        <tr key={l.id}>
+                          <td style={{ fontWeight: 700 }}>{l.name}</td>
+                          <td>
+                            <div style={{ fontSize: '0.85rem' }}>{l.email}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{l.phone}</div>
+                          </td>
+                          <td>{l.source}</td>
+                          <td>
+                            <span style={{
+                              fontSize: '0.78rem', padding: '3px 8px', borderRadius: '12px', fontWeight: 700,
+                              background: l.status === 'Converted' ? '#dcfce7' : l.status === 'Lost' ? '#fee2e2' : l.status === 'Qualified' ? '#f3e8ff' : '#f1f5f9',
+                              color: l.status === 'Converted' ? '#15803d' : l.status === 'Lost' ? '#b91c1c' : l.status === 'Qualified' ? '#6b21a8' : '#334155'
+                            }}>{l.status}</span>
+                          </td>
+                          <td style={{ fontSize: '0.82rem' }}>{l.remarks}</td>
+                          <td style={{ fontSize: '0.8rem' }}>{new Date(l.created_at).toLocaleDateString('en-IN')}</td>
+                          <td>
+                            <button className="crm-btn-primary" onClick={() => handleDeleteLead(l.id)} style={{ padding: '4px 8px', fontSize: '0.75rem', background: 'var(--rose)' }}>Delete</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Add Lead Form */}
+              <div className="crm-card" style={{ padding: '20px' }}>
+                <h4 style={{ margin: '0 0 15px 0', color: 'var(--navy)' }}>Add New Inbound Lead</h4>
+                <form onSubmit={handleSaveLead} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div className="crm-form-group">
+                    <label>Lead Full Name</label>
+                    <input type="text" className="crm-form-control" placeholder="Enter full name" required value={lName} onChange={e => setLName(e.target.value)} />
+                  </div>
+                  <div className="crm-form-group">
+                    <label>Email Address</label>
+                    <input type="email" className="crm-form-control" placeholder="Enter email ID" value={lEmail} onChange={e => setLEmail(e.target.value)} />
+                  </div>
+                  <div className="crm-form-group">
+                    <label>Phone Number</label>
+                    <input type="text" className="crm-form-control" placeholder="Enter mobile no" value={lPhone} onChange={e => setLPhone(e.target.value)} />
+                  </div>
+                  <div className="crm-form-group">
+                    <label>Lead Source</label>
+                    <select className="crm-form-control" value={lSource} onChange={e => setLSource(e.target.value)}>
+                      <option value="Website">Website Form</option>
+                      <option value="Walk-in">Walk-in Inquiry</option>
+                      <option value="Referral">Client Referral</option>
+                      <option value="Cold Call">Cold Outreach</option>
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label>Funnel Status</label>
+                    <select className="crm-form-control" value={lStatus} onChange={e => setLStatus(e.target.value)}>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Interested">Interested</option>
+                      <option value="Qualified">Qualified</option>
+                      <option value="Converted">Converted (Won)</option>
+                      <option value="Lost">Lost</option>
+                    </select>
+                  </div>
+                  <div className="crm-form-group">
+                    <label>Advisor Remarks</label>
+                    <textarea className="crm-form-control" rows="2" placeholder="Enter notes..." value={lRemarks} onChange={e => setLRemarks(e.target.value)}></textarea>
+                  </div>
+                  <button type="submit" className="crm-btn-primary" style={{ padding: '10px' }}>Register Lead</button>
+                </form>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {crmSubTab === 'clients' && (
+          <div className="crm-client-flex">
+            
+            {/* Left Clients list */}
+            <div className="crm-client-list-panel">
+              <input 
+                type="text" 
+                className="crm-search-box" 
+                placeholder="🔍 Search client list..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+              <button 
+                className="crm-btn-primary" 
+                style={{ width: '100%', marginBottom: '15px', padding: '8px' }}
+                onClick={() => handleSelectClient(null)}
+              >
+                ➕ Create New Client Profile
+              </button>
+
+              {filteredClients.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--muted)', fontSize: '0.85rem' }}>No clients found.</div>
+              ) : filteredClients.map(c => (
+                <div 
+                  className={`crm-client-list-item ${selectedClient && selectedClient.username === c.username ? 'active' : ''}`}
+                  key={c.id}
+                  onClick={() => handleSelectClient(c)}
+                >
+                  <div className="crm-client-list-name">{c.name}</div>
+                  <div className="crm-client-list-meta">
+                    <span>AUM: ₹{c.aum.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+                    <span style={{ color: c.status === 'Active' ? 'var(--emerald)' : 'var(--rose)', fontWeight: 700 }}>{c.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Right details / form workspace */}
+            <div className="crm-client-workspace-panel">
+              
+              {/* Profile creation or edit */}
+              <div className="crm-card" style={{ border: 'none', padding: 0, boxShadow: 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <h3 className="crm-section-title" style={{ margin: 0 }}>
+                    {selectedClient ? `Edit Client Profile: ${selectedClient.name}` : 'Provision New Client Portal Account'}
+                  </h3>
+                  {selectedClient && (
+                    <button 
+                      className="crm-btn-danger" 
+                      onClick={() => handleDeleteClient(selectedClient.id)}
+                      style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                    >
+                      Delete Profile
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleCreateClient}>
+                  <div className="crm-form-grid">
+                    <div className="crm-form-group">
+                      <label>Client Full Name</label>
+                      <input type="text" className="crm-form-control" required placeholder="Enter full name" value={cName} onChange={e => setCName(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>CRM Username (unique)</label>
+                      <input type="text" className="crm-form-control" required placeholder="Assign username" value={cUsername} onChange={e => setCUsername(e.target.value)} disabled={!!selectedClient} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>CRM Password</label>
+                      <input type="text" className="crm-form-control" required placeholder="Assign password" value={cPassword} onChange={e => setCPassword(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Email Address</label>
+                      <input type="email" className="crm-form-control" required placeholder="Enter email" value={cEmail} onChange={e => setCEmail(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Phone Number</label>
+                      <input type="text" className="crm-form-control" required placeholder="Enter phone" value={cPhone} onChange={e => setCPhone(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>PAN Card Number</label>
+                      <input type="text" className="crm-form-control" placeholder="Enter PAN" value={cPan} onChange={e => setCPan(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Date of Birth (YYYY-MM-DD)</label>
+                      <input type="text" className="crm-form-control" placeholder="e.g. 1990-03-13" value={cDob} onChange={e => setCDob(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Assigned RM</label>
+                      <input type="text" className="crm-form-control" value={cRm} onChange={e => setCRm(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Address Info</label>
+                      <input type="text" className="crm-form-control" placeholder="Enter city/address" value={cAddress} onChange={e => setCAddress(e.target.value)} />
+                    </div>
+                    <div className="crm-form-group">
+                      <label>Account Status</label>
+                      <select className="crm-form-control" value={cStatus} onChange={e => setCStatus(e.target.value)}>
+                        <option value="Active">Active</option>
+                        <option value="Deactivated">Deactivated</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="crm-btn-primary">
+                    {selectedClient ? 'Save Profile Updates' : 'Provision Portal Credentials & Profile'}
+                  </button>
+                </form>
+              </div>
+
+              {/* Selected client additional management tabs (Holdings, Tasks) */}
+              {selectedClient && (
+                <div style={{ marginTop: '40px', borderTop: '1px solid #e2e8f0', paddingTop: '30px' }}>
+                  
+                  {/* Holdings manager */}
+                  <div style={{ marginBottom: '40px' }}>
+                    <h3 className="crm-section-title">Portfolio Assets Holdings Manager</h3>
+                    
+                    {loading ? <div className="admin-loader">Loading client holdings...</div> : (
+                      <div>
+                        {clientDetails.holdings.length === 0 ? (
+                          <div style={{ padding: '15px 0', color: 'var(--muted)', fontSize: '0.9rem' }}>No portfolio holdings added yet. Use the form below to allocate holdings.</div>
+                        ) : (
+                          <table className="crm-table" style={{ fontSize: '0.85rem' }}>
+                            <thead>
+                              <tr>
+                               <th>Scheme / Asset Name</th>
+                               <th>Folio</th>
+                               <th>Asset Class</th>
+                               <th>Units</th>
+                               <th>Buy NAV</th>
+                               <th>Current NAV</th>
+                               <th>Valuation</th>
+                               <th>Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {clientDetails.holdings.map(h => (
+                                <tr key={h.id}>
+                                  <td style={{ fontWeight: 700 }}>{h.scheme_name}</td>
+                                  <td>{h.folio_number}</td>
+                                  <td>{h.asset_class}</td>
+                                  <td>{h.units.toFixed(2)}</td>
+                                  <td>₹{h.purchase_price}</td>
+                                  <td>₹{h.current_nav}</td>
+                                  <td style={{ fontWeight: 700 }}>₹{h.current_value.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+                                  <td>
+                                    <button className="crm-btn-primary" onClick={() => handleDeleteHolding(h.id)} style={{ padding: '3px 8px', fontSize: '0.75rem', background: 'var(--rose)' }}>Delete</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                        
+                        {/* Add Holding Form */}
+                        <form onSubmit={handleAddHolding} style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #cbd5e1', marginTop: '20px' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--navy)' }}>Add Mutual Fund / Equity Asset Holding</h4>
+                          <div className="crm-form-grid" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
+                            <div className="crm-form-group">
+                              <label>Scheme / Stock Name</label>
+                              <input type="text" className="crm-form-control" required placeholder="e.g. HDFC Mid-Cap Opportunities Fund" value={hScheme} onChange={e => setHScheme(e.target.value)} />
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Folio Number</label>
+                              <input type="text" className="crm-form-control" placeholder="e.g. 1278485" value={hFolio} onChange={e => setHFolio(e.target.value)} />
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Asset Class</label>
+                              <select className="crm-form-control" value={hAsset} onChange={e => setHAsset(e.target.value)}>
+                                <option value="Equity">Equity</option>
+                                <option value="Debt">Debt</option>
+                                <option value="Hybrid">Hybrid</option>
+                                <option value="Cash">Cash (Liquid)</option>
+                                <option value="Gold">Gold</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div className="crm-form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', marginTop: '10px' }}>
+                            <div className="crm-form-group">
+                              <label>Units Held</label>
+                              <input type="number" step="any" className="crm-form-control" required placeholder="e.g. 125.5" value={hUnits} onChange={e => setHUnits(e.target.value)} />
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Buy NAV / Purchase Price (₹)</label>
+                              <input type="number" step="any" className="crm-form-control" required placeholder="e.g. 120.5" value={hPrice} onChange={e => setHPrice(e.target.value)} />
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Current NAV (₹)</label>
+                              <input type="number" step="any" className="crm-form-control" required placeholder="e.g. 145.8" value={hNav} onChange={e => setHNav(e.target.value)} />
+                            </div>
+                          </div>
+                          <button type="submit" className="crm-btn-primary" style={{ marginTop: '12px', fontSize: '0.85rem', padding: '8px 16px' }}>Add Holding Record</button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tasks manager */}
+                  <div>
+                    <h3 className="crm-section-title">Client Tasks &amp; Interaction Logs Scheduler</h3>
+                    
+                    {loading ? <div className="admin-loader">Loading client tasks...</div> : (
+                      <div>
+                        {clientDetails.tasks.length === 0 ? (
+                          <div style={{ padding: '15px 0', color: 'var(--muted)', fontSize: '0.9rem' }}>No advisor actions or follow-up calls scheduled for this client.</div>
+                        ) : (
+                          <div className="crm-timeline" style={{ marginBottom: '30px' }}>
+                            {clientDetails.tasks.map(t => (
+                              <div className="crm-timeline-item" key={t.id}>
+                                <div className={`crm-timeline-badge ${t.type.toLowerCase()}`}>
+                                  {t.type === 'Call' && <PhoneCall size={16} />}
+                                  {t.type === 'Meeting' && <Users size={16} />}
+                                  {t.type === 'Email' && <Mail size={16} />}
+                                  {t.type === 'Task' && <Briefcase size={16} />}
+                                </div>
+                                <div className="crm-timeline-content" style={{ padding: '12px' }}>
+                                  <div className="crm-timeline-title" style={{ fontSize: '0.9rem' }}>
+                                    <span>{t.title}</span>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                      <button 
+                                        onClick={() => handleToggleTask(t.id)}
+                                        style={{
+                                          fontSize: '0.75rem', padding: '2px 8px', borderRadius: '12px', cursor: 'pointer', border: 'none',
+                                          background: t.status === 'Completed' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+                                          color: t.status === 'Completed' ? '#059669' : '#d97706',
+                                          fontWeight: 700
+                                        }}
+                                      >
+                                        {t.status} (Click to Toggle)
+                                      </button>
+                                      <button 
+                                        onClick={() => handleDeleteTask(t.id)}
+                                        style={{ background: 'transparent', border: 'none', color: 'var(--rose)', cursor: 'pointer', fontSize: '0.8rem' }}
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <p className="crm-timeline-desc" style={{ fontSize: '0.82rem', margin: '4px 0 0' }}>{t.description}</p>
+                                  <div className="crm-timeline-meta" style={{ fontSize: '0.78rem', marginTop: '6px' }}>
+                                    <span>Due Date: {t.due_date ? new Date(t.due_date).toLocaleDateString('en-IN') : 'Flexible'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Add Task Form */}
+                        <form onSubmit={handleAddTask} style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+                          <h4 style={{ margin: '0 0 12px 0', fontSize: '0.9rem', color: 'var(--navy)' }}>Schedule New Adviser Action / Follow-up</h4>
+                          <div className="crm-form-grid" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
+                            <div className="crm-form-group">
+                              <label>Task / Interaction Title</label>
+                              <input type="text" className="crm-form-control" required placeholder="e.g. Schedule Mutual Fund Advisory call" value={tTitle} onChange={e => setTTitle(e.target.value)} />
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Interaction Type</label>
+                              <select className="crm-form-control" value={tType} onChange={e => setTType(e.target.value)}>
+                                <option value="Call">Phone Call</option>
+                                <option value="Meeting">Meeting / Review</option>
+                                <option value="Email">Email Communication</option>
+                                <option value="Task">Task Action</option>
+                              </select>
+                            </div>
+                            <div className="crm-form-group">
+                              <label>Due Date</label>
+                              <input type="date" className="crm-form-control" required value={tDue} onChange={e => setTDue(e.target.value)} />
+                            </div>
+                          </div>
+                          <div className="crm-form-group" style={{ marginTop: '10px' }}>
+                            <label>Interaction description / notes</label>
+                            <input type="text" className="crm-form-control" placeholder="Enter notes or task details..." value={tDesc} onChange={e => setTDesc(e.target.value)} />
+                          </div>
+                          <button type="submit" className="crm-btn-primary" style={{ marginTop: '12px', fontSize: '0.85rem', padding: '8px 16px' }}>Schedule Action</button>
+                        </form>
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
    11. LEADS ADMIN DASHBOARD PAGE
    ═══════════════════════════════════════════════ */
 function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
@@ -3480,6 +4634,28 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
     } catch (err) {
       console.error(err);
       alert('Error contacting backend server.');
+    }
+  };
+
+  const handleApprovePayment = async (regId) => {
+    if (!window.confirm('Approve payment for this registration? This will mark it as paid and automatically send the meeting confirmation email containing the join link.')) return;
+    const authHeaderVal = sessionStorage.getItem('scsl_admin_auth');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/admin/registrations/approve-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': authHeaderVal || '' },
+        body: JSON.stringify({ registration_id: regId })
+      });
+      if (res.ok) {
+        alert('Payment approved successfully! Confirmation email queued.');
+        fetchLeads();
+      } else {
+        const errData = await res.json();
+        alert('Failed to approve payment: ' + (errData.detail || 'Server error'));
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error approving payment.');
     }
   };
 
@@ -3728,6 +4904,9 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
             <button className={`admin-tab ${activeTab === 'cms' ? 'active' : ''}`} onClick={() => setActiveTab('cms')}>
               ✏️ Edit Homepage
             </button>
+            <button className={`admin-tab ${activeTab === 'crm' ? 'active' : ''}`} onClick={() => setActiveTab('crm')}>
+              📊 Client CRM
+            </button>
             {adminRole === 'admin' && (
               <>
                 <button className={`admin-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => setActiveTab('admins')}>
@@ -3752,6 +4931,8 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
 
         {loading ? (
           <div className="admin-loader">Loading records from database...</div>
+        ) : activeTab === 'crm' ? (
+          <AdminCRMTab authHeader={sessionStorage.getItem('scsl_admin_auth')} />
         ) : activeTab === 'contacts' ? (
           <div className="admin-table-container">
             <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0 0' }}>
@@ -3807,6 +4988,8 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
                     <th>Phone</th>
                     <th>Webinar Topic</th>
                     <th>Webinar Date</th>
+                    <th>Payment</th>
+                    <th>Details / UTR</th>
                     <th>Registered At</th>
                     <th>Actions</th>
                   </tr>
@@ -3820,6 +5003,31 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
                       <td>{r.phone || '-'}</td>
                       <td className="topic-cell">{r.topic}</td>
                       <td>{r.date}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            background: r.payment_status === 'paid' ? '#dcfce7' : r.payment_status === 'pending' ? '#fee2e2' : '#e2e8f0', 
+                            color: r.payment_status === 'paid' ? '#16a34a' : r.payment_status === 'pending' ? '#dc2626' : '#475569', 
+                            padding: '3px 10px', 
+                            borderRadius: '20px', 
+                            fontSize: '0.78rem', 
+                            fontWeight: 600, 
+                            display: 'inline-block' 
+                          }}>
+                            {r.payment_status === 'paid' ? `✓ Paid` : r.payment_status === 'pending' ? 'Pending' : 'Free'}
+                          </span>
+                          {r.payment_status === 'pending' && (
+                            <button
+                              onClick={() => handleApprovePayment(r.id)}
+                              style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700 }}
+                              title="Verify payment and send confirmation email"
+                            >
+                              ✓ Approve
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: '#555', fontFamily: 'monospace' }}>{r.payment_utr || '—'}</td>
                       <td>{new Date(r.timestamp).toLocaleString()}</td>
                       <td>
                         <button className="delete-btn" onClick={() => handleDelete('registration', r.id)}>Delete</button>
@@ -4517,9 +5725,18 @@ function WebinarRegistrationModal({ webinar, onClose }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [otp, setOtp] = useState('');
-  const [paymentUtr, setPaymentUtr] = useState('');
   const [success, setSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   const handleRequestOtp = async (e) => {
     e.preventDefault();
@@ -4553,11 +5770,11 @@ function WebinarRegistrationModal({ webinar, onClose }) {
     if (webinar.is_paid) {
       setStep(3);
     } else {
-      handleRegisterSubmit(otp, '');
+      handleRegisterSubmit(otp);
     }
   };
 
-  const handleRegisterSubmit = async (otpValue, utrValue) => {
+  const handleRegisterSubmit = async (otpValue) => {
     setSubmitting(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/register`, {
@@ -4571,7 +5788,7 @@ function WebinarRegistrationModal({ webinar, onClose }) {
           topic: webinar.topic,
           date: `${webinar.date} · ${webinar.time}`,
           otp: otpValue,
-          payment_utr: utrValue
+          payment_utr: ''
         })
       });
       if (res.ok) {
@@ -4588,13 +5805,94 @@ function WebinarRegistrationModal({ webinar, onClose }) {
     }
   };
 
-  const handlePaymentSubmit = (e) => {
+  const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    if (webinar.payment_utr_required && !paymentUtr.trim()) {
-      alert('Please enter your transaction UPI Ref / UTR number.');
-      return;
+    setSubmitting(true);
+    try {
+      const initRes = await fetch(`${API_BASE_URL}/api/payment/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          webinar_id: webinar.id,
+          topic: webinar.topic,
+          date: `${webinar.date} · ${webinar.time}`,
+          otp: otp
+        })
+      });
+      
+      if (!initRes.ok) {
+        const errData = await initRes.json();
+        alert(errData.detail || 'Failed to initiate payment. Please try again.');
+        setSubmitting(false);
+        return;
+      }
+      
+      const orderInfo = await initRes.json();
+      
+      const options = {
+        key: orderInfo.key_id,
+        amount: orderInfo.amount,
+        currency: orderInfo.currency,
+        name: 'Steel City Securities',
+        description: webinar.topic,
+        order_id: orderInfo.order_id,
+        handler: async function (response) {
+          setSubmitting(true);
+          try {
+            const verifyRes = await fetch(`${API_BASE_URL}/api/payment/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                registration_id: orderInfo.registration_id
+              })
+            });
+            
+            if (verifyRes.ok) {
+              setSuccess(true);
+            } else {
+              const errData = await verifyRes.json();
+              alert(errData.detail || 'Payment verification failed. Please contact support.');
+            }
+          } catch (err) {
+            console.error('Payment verify error:', err);
+            alert('Error verifying payment with server.');
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        prefill: {
+          name: form.name,
+          email: form.email,
+          contact: form.phone
+        },
+        theme: {
+          color: '#0077B6'
+        },
+        modal: {
+          ondismiss: function () {
+            setSubmitting(false);
+          }
+        }
+      };
+      
+      if (window.Razorpay) {
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+      } else {
+        alert('Razorpay SDK failed to load. Please verify your connection.');
+        setSubmitting(false);
+      }
+    } catch (err) {
+      console.error('Payment initiation error:', err);
+      alert('Error connecting to payment server.');
+      setSubmitting(false);
     }
-    handleRegisterSubmit(otp, paymentUtr);
   };
 
   const renderStepIndicator = () => {
@@ -4645,7 +5943,7 @@ function WebinarRegistrationModal({ webinar, onClose }) {
             <p>You have registered for <strong>{webinar.topic}</strong>.</p>
             <p className="modal-date-info">📅 {webinar.date} at {webinar.time}</p>
             {webinar.is_paid ? (
-              <p className="modal-email-note" style={{ color: '#d97706', fontWeight: 600 }}>Your payment transaction is under review. Joining details will be verified shortly.</p>
+              <p className="modal-email-note" style={{ color: '#16a34a', fontWeight: 600 }}>Payment confirmed automatically! Meeting link and details sent to your email.</p>
             ) : (
               <p className="modal-email-note">A confirmation email has been sent with meeting details.</p>
             )}
@@ -4692,36 +5990,19 @@ function WebinarRegistrationModal({ webinar, onClose }) {
         ) : (
           <form className="modal-form" onSubmit={handlePaymentSubmit}>
             <h3>Webinar Payment</h3>
-            <p className="modal-sub">Scan the QR code below to make payment of ₹{webinar.fee_amount}.</p>
+            <p className="modal-sub">Click the button below to pay ₹{webinar.fee_amount} securely online via Razorpay.</p>
             
-            <div className="payment-box" style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '16px', textAlign: 'center', margin: '12px 0' }}>
-              <span style={{ background: '#fef3c7', color: '#d97706', padding: '6px 14px', borderRadius: '20px', fontSize: '0.9rem', fontWeight: 800 }}>
-                💳 Fee Amount: ₹{webinar.fee_amount}
+            <div className="payment-box" style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '12px', padding: '24px', textAlign: 'center', margin: '20px 0' }}>
+              <p style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: 'var(--muted)', fontWeight: 600 }}>Webinar Topic:</p>
+              <h4 style={{ margin: '0 0 16px 0', color: 'var(--navy)' }}>{webinar.topic}</h4>
+              <span style={{ background: '#e8f0fe', color: 'var(--blue)', padding: '8px 18px', borderRadius: '20px', fontSize: '1rem', fontWeight: 800 }}>
+                💳 Total Amount: ₹{webinar.fee_amount}
               </span>
-              
-              <div style={{ margin: '14px auto', maxWidth: '180px', background: 'white', padding: '8px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-                <img src="/phonepe-qr.png" alt="PhonePe QR Code" style={{ width: '100%', height: 'auto', display: 'block' }} />
-              </div>
-              
-              <p style={{ margin: '0 0 2px 0', fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600 }}>UPI Payee Name:</p>
-              <p style={{ margin: '0', fontSize: '0.85rem', fontWeight: 700, color: 'var(--navy)' }}>Mr KOPPISETTI VENKATASIVA RAMAKRISHNA</p>
             </div>
             
-            <div className="mform-group">
-              <label>Transaction UPI Ref / UTR Number {webinar.payment_utr_required ? '*' : '(Optional)'}</label>
-              <input 
-                type="text" 
-                placeholder="12-digit transaction ID (e.g. 3081...)" 
-                required={webinar.payment_utr_required} 
-                value={paymentUtr} 
-                onChange={e => setPaymentUtr(e.target.value.replace(/\D/g, '').slice(0, 12))} 
-                disabled={submitting} 
-              />
-              <p style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: '4px', lineHeight: '1.2' }}>UPI Ref / UTR is a 12-digit number found in your payment app confirmation screen.</p>
-            </div>
-            
-            <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting}>
-              {submitting ? 'Verifying & Completing...' : 'Verify & Complete Registration'}
+            <button type="submit" className="btn-primary-lg modal-submit" disabled={submitting} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <CreditCard size={18} />
+              {submitting ? 'Initiating Checkout...' : 'Pay Online with Razorpay'}
             </button>
             <button type="button" className="btn-secondary-lg w-full mt-2" onClick={() => setStep(2)} disabled={submitting}>Back to OTP</button>
           </form>
@@ -4730,6 +6011,7 @@ function WebinarRegistrationModal({ webinar, onClose }) {
     </div>
   );
 }
+
 
 function OpenAccountModal({ onClose }) {
   const [form, setForm] = useState({
@@ -4930,7 +6212,7 @@ export default function App() {
   useKeepAlive();
   const [page, setPage] = useState(() => {
     const hash = window.location.hash.replace('#', '');
-    return ['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash) ? hash : 'home';
+    return ['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'crm', 'privacy', 'disclaimer', 'investor-charter'].includes(hash) ? hash : 'home';
   });
 
   const [cmsContent, setCmsContent] = useState({});
@@ -4960,7 +6242,7 @@ export default function App() {
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace('#', '');
-      if (['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
+      if (['home', 'news', 'market-search', 'webinars', 'services', 'hub', 'journey', 'about', 'contact', 'leads', 'crm', 'privacy', 'disclaimer', 'investor-charter'].includes(hash)) {
         setPage(hash);
         window.scrollTo(0, 0);
       } else if (hash === '') {
@@ -5016,6 +6298,7 @@ export default function App() {
         {page === 'about' && <About cmsContent={cmsContent} />}
         {page === 'contact' && <Contact cmsContent={cmsContent} />}
         {page === 'leads' && <LeadsAdminPage cmsContent={cmsContent} onCMSUpdate={fetchCMS} />}
+        {page === 'crm' && <CRMClientPage />}
         {page === 'privacy' && <PrivacyPolicy onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
         {page === 'disclaimer' && <Disclaimer onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
         {page === 'investor-charter' && <InvestorCharter onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
