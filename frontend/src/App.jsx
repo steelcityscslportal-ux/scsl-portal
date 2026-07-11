@@ -542,7 +542,13 @@ function WebinarSchedule({ onRegisterClick }) {
         const res = await fetch(`${API_BASE_URL}/api/webinars`);
         if (res.ok) {
           const data = await res.json();
-          setWebinars(data);
+          const now = new Date();
+          // Filter out completed sessions based on start_time
+          const upcoming = data.filter(w => {
+            if (!w.start_time) return true; // keep if admin didn't specify start_time
+            return new Date(w.start_time) >= now;
+          });
+          setWebinars(upcoming);
         }
       } catch (err) {
         console.error('Failed to fetch webinars:', err);

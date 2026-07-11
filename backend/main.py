@@ -550,7 +550,9 @@ async def root():
 # ─── Webinar Public Endpoints ─────────────────────────
 @app.get("/api/webinars")
 async def get_webinars(db: Session = Depends(get_db)):
-    webinars = db.query(Webinar).order_by(Webinar.id.asc()).all()
+    now = datetime.datetime.utcnow()
+    # Filter webinars: show only if start_time is null OR start_time is in the future
+    webinars = db.query(Webinar).filter((Webinar.start_time == None) | (Webinar.start_time >= now)).order_by(Webinar.id.asc()).all()
     result = []
     for w in webinars:
         reg_count = db.query(Registration).filter(Registration.webinar_id == w.id).count()
