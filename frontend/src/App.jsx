@@ -4560,7 +4560,7 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState('contacts');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [adminRole, setAdminRole] = useState('supervisor'); // 'admin' or 'supervisor'
 
   const fetchLeads = async () => {
@@ -4930,10 +4930,36 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
   return (
     <section className="admin-section">
       <div className="container">
-        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+        
+        {/* Header */}
+        <div className="admin-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', marginBottom: '30px' }}>
           <div>
-            <h1 className="admin-title">SCSL Admin Portal</h1>
-            <p className="admin-subtitle">Monitor inquiries, registrations, and account applications stored in cloud database</p>
+            <h1 className="admin-title">
+              {activeTab === 'dashboard' ? 'SCSL Admin Portal' : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    onClick={() => { setActiveTab('dashboard'); setSearch(''); }} 
+                    className="btn-ghost" 
+                    style={{ padding: '6px 12px', fontSize: '0.85rem', border: '1.5px solid var(--sky)', color: 'var(--blue)', background: 'transparent', cursor: 'pointer', borderRadius: '8px' }}
+                  >
+                    ⬅ Back
+                  </button>
+                  <span style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--navy)' }}>
+                    {activeTab === 'contacts' && '📞 Contact Leads'}
+                    {activeTab === 'registrations' && '🎓 Webinar Registrations'}
+                    {activeTab === 'accounts' && '📝 Account Openings'}
+                    {activeTab === 'webinars' && '📹 Manage Webinars'}
+                    {activeTab === 'analytics' && '📈 Site Analytics'}
+                    {activeTab === 'feedbacks' && '💬 Customer Reviews'}
+                    {activeTab === 'cms' && '✏️ Homepage CMS'}
+                    {activeTab === 'crm' && '📊 Client CRM Suite'}
+                    {activeTab === 'admins' && '👥 Staff Admins'}
+                    {activeTab === 'settings' && '⚙️ System Settings'}
+                  </span>
+                </div>
+              )}
+            </h1>
+            {activeTab === 'dashboard' && <p className="admin-subtitle">Monitor inquiries, registrations, and account applications stored in cloud database</p>}
           </div>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button className="btn-solid refresh-btn" onClick={fetchLeads} style={{ border: 'none', cursor: 'pointer' }}>Refresh Data</button>
@@ -4942,78 +4968,165 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
         </div>
 
         {error && (
-          <div className="admin-error-banner">
+          <div className="admin-error-banner" style={{ marginBottom: '20px' }}>
             <p>⚠️ {error}</p>
           </div>
         )}
 
-        <div className="admin-stats-grid">
-          <div className="astat-card">
-            <h4>General Inquiries</h4>
-            <div className="astat-val">{leads.contacts.length}</div>
-            <p>Contact form submissions</p>
-          </div>
-          <div className="astat-card">
-            <h4>Webinar Registrations</h4>
-            <div className="astat-val">{leads.registrations.length}</div>
-            <p>Seats booked across all topics</p>
-          </div>
-          <div className="astat-card">
-            <h4>Account Openings</h4>
-            <div className="astat-val">{(leads.account_openings || []).length}</div>
-            <p>Demat & Trading account applications</p>
-          </div>
-        </div>
+        {/* Dashboard Hub View */}
+        {activeTab === 'dashboard' ? (
+          <div>
+            {/* Stats Summary Cards */}
+            <div className="admin-stats-grid" style={{ marginBottom: '30px' }}>
+              <div className="astat-card" onClick={() => setActiveTab('contacts')} style={{ cursor: 'pointer' }}>
+                <h4>General Inquiries</h4>
+                <div className="astat-val">{leads.contacts.length}</div>
+                <p>Contact form submissions</p>
+              </div>
+              <div className="astat-card" onClick={() => setActiveTab('registrations')} style={{ cursor: 'pointer' }}>
+                <h4>Webinar Registrations</h4>
+                <div className="astat-val">{leads.registrations.length}</div>
+                <p>Seats booked across all topics</p>
+              </div>
+              <div className="astat-card" onClick={() => setActiveTab('accounts')} style={{ cursor: 'pointer' }}>
+                <h4>Account Openings</h4>
+                <div className="astat-val">{(leads.account_openings || []).length}</div>
+                <p>Demat & Trading account applications</p>
+              </div>
+            </div>
 
-        <div className="admin-controls">
-          <div className="admin-tabs">
-            <button className={`admin-tab ${activeTab === 'contacts' ? 'active' : ''}`} onClick={() => setActiveTab('contacts')}>
-              Contact Leads ({filteredContacts.length})
-            </button>
-            <button className={`admin-tab ${activeTab === 'registrations' ? 'active' : ''}`} onClick={() => setActiveTab('registrations')}>
-              Webinar Regs ({filteredRegs.length})
-            </button>
-            <button className={`admin-tab ${activeTab === 'accounts' ? 'active' : ''}`} onClick={() => setActiveTab('accounts')}>
-              Account Openings ({filteredAccounts.length})
-            </button>
-            <button className={`admin-tab ${activeTab === 'webinars' ? 'active' : ''}`} onClick={() => setActiveTab('webinars')}>
-              Manage Webinars
-            </button>
-            <button className={`admin-tab ${activeTab === 'analytics' ? 'active' : ''}`} onClick={() => setActiveTab('analytics')}>
-              Site Analytics
-            </button>
-            <button className={`admin-tab ${activeTab === 'feedbacks' ? 'active' : ''}`} onClick={() => setActiveTab('feedbacks')}>
-              Reviews ({filteredFeedbacks.length})
-            </button>
-            <button className={`admin-tab ${activeTab === 'cms' ? 'active' : ''}`} onClick={() => setActiveTab('cms')}>
-              ✏️ Edit Homepage
-            </button>
-            <button className={`admin-tab ${activeTab === 'crm' ? 'active' : ''}`} onClick={() => setActiveTab('crm')}>
-              📊 Client CRM
-            </button>
-            {adminRole === 'admin' && (
-              <>
-                <button className={`admin-tab ${activeTab === 'admins' ? 'active' : ''}`} onClick={() => setActiveTab('admins')}>
-                  👥 Manage Admins
-                </button>
-                <button className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
-                  ⚙️ System Settings
-                </button>
-              </>
+            {/* Options Hub Menu Grid */}
+            <h3 style={{ color: 'var(--navy)', fontWeight: 800, fontSize: '1.2rem', marginBottom: '20px' }}>Admin Action Workspace</h3>
+            <div className="admin-menu-grid">
+              
+              <div className="admin-menu-card" onClick={() => setActiveTab('contacts')}>
+                <div className="menu-card-icon" style={{ background: '#eff6ff', color: '#3b82f6' }}>📞</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Contact Leads</span>
+                    <span className="menu-card-badge">{leads.contacts.length}</span>
+                  </div>
+                  <p className="menu-card-desc">View and manage support/contact inquiries from the website form.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('registrations')}>
+                <div className="menu-card-icon" style={{ background: '#f5f3ff', color: '#8b5cf6' }}>🎓</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Webinar Registrations</span>
+                    <span className="menu-card-badge">{leads.registrations.length}</span>
+                  </div>
+                  <p className="menu-card-desc">Approve or track users who booked a seat for webinars.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('accounts')}>
+                <div className="menu-card-icon" style={{ background: '#ecfdf5', color: '#10b981' }}>📝</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Account Openings</span>
+                    <span className="menu-card-badge">{(leads.account_openings || []).length}</span>
+                  </div>
+                  <p className="menu-card-desc">Manage demat and trading account onboarding requests.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('webinars')}>
+                <div className="menu-card-icon" style={{ background: '#fff7ed', color: '#f97316' }}>📹</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Manage Webinars</span>
+                  </div>
+                  <p className="menu-card-desc">Schedule, edit, or delete interactive webinar slots.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('analytics')}>
+                <div className="menu-card-icon" style={{ background: '#f0fdfa', color: '#14b8a6' }}>📈</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Site Analytics</span>
+                  </div>
+                  <p className="menu-card-desc">Inspect browser, visitor IP, and page-view metrics.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('feedbacks')}>
+                <div className="menu-card-icon" style={{ background: '#fffbeb', color: '#f59e0b' }}>💬</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Customer Reviews</span>
+                    <span className="menu-card-badge">{(leads.feedbacks || []).length}</span>
+                  </div>
+                  <p className="menu-card-desc">Moderate and approve testimonials visible on the homepage.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('cms')}>
+                <div className="menu-card-icon" style={{ background: '#fdf2f8', color: '#ec4899' }}>✏️</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Homepage CMS</span>
+                  </div>
+                  <p className="menu-card-desc">Edit hero text, subheadings, and slides dynamically.</p>
+                </div>
+              </div>
+
+              <div className="admin-menu-card" onClick={() => setActiveTab('crm')}>
+                <div className="menu-card-icon" style={{ background: '#eff6ff', color: '#2563eb' }}>📊</div>
+                <div className="menu-card-body">
+                  <div className="menu-card-title">
+                    <span>Client CRM Console</span>
+                  </div>
+                  <p className="menu-card-desc">Manage client login credentials, portfolios, AUM, and scheduled calls.</p>
+                </div>
+              </div>
+
+              {adminRole === 'admin' && (
+                <>
+                  <div className="admin-menu-card" onClick={() => setActiveTab('admins')}>
+                    <div className="menu-card-icon" style={{ background: '#f1f5f9', color: '#64748b' }}>👥</div>
+                    <div className="menu-card-body">
+                      <div className="menu-card-title">
+                        <span>Manage Admins</span>
+                      </div>
+                      <p className="menu-card-desc">Control staff access, add new administrative users, and assign roles.</p>
+                    </div>
+                  </div>
+
+                  <div className="admin-menu-card" onClick={() => setActiveTab('settings')}>
+                    <div className="menu-card-icon" style={{ background: '#fafaf9', color: '#78716c' }}>⚙️</div>
+                    <div className="menu-card-body">
+                      <div className="menu-card-title">
+                        <span>System Settings</span>
+                      </div>
+                      <p className="menu-card-desc">Configure system keys, Razorpay API integrations, and configurations.</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+        ) : (
+          <div>
+            {/* Search wrap: only show for lists that benefit from search */}
+            {['contacts', 'registrations', 'accounts', 'feedbacks'].includes(activeTab) && (
+              <div className="admin-search-wrap" style={{ marginBottom: '20px', maxWidth: '480px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Search list records..." 
+                  value={search} 
+                  onChange={e => setSearch(e.target.value)} 
+                  className="admin-search-input"
+                />
+              </div>
             )}
           </div>
-          <div className="admin-search-wrap">
-            <input 
-              type="text" 
-              placeholder="Search by name, email, phone, state or PAN..." 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              className="admin-search-input"
-            />
-          </div>
-        </div>
+        )}
 
-        {loading ? (
+        {loading && activeTab !== 'dashboard' ? (
           <div className="admin-loader">Loading records from database...</div>
         ) : activeTab === 'crm' ? (
           <AdminCRMTab authHeader={sessionStorage.getItem('scsl_admin_auth')} />
