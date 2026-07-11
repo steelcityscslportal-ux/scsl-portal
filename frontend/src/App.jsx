@@ -4470,6 +4470,7 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   // CAPTCHA variables
   const [captchaCode, setCaptchaCode] = useState('');
@@ -4798,24 +4799,46 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
             
             <div className="mform-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--navy)' }}>Password</label>
-              <input 
-                type="password" 
-                placeholder="Enter your password" 
-                required 
-                value={passwordInput} 
-                onChange={e => setPasswordInput(e.target.value)} 
-                disabled={loggingIn}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid #CBD5E1',
-                  background: 'var(--white)',
-                  fontSize: '0.95rem',
-                  outline: 'none',
-                  transition: 'var(--transition)'
-                }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showAdminPassword ? "text" : "password"} 
+                  placeholder="Enter your password" 
+                  required 
+                  value={passwordInput} 
+                  onChange={e => setPasswordInput(e.target.value)} 
+                  disabled={loggingIn}
+                  style={{
+                    width: '100%',
+                    padding: '12px 50px 12px 16px',
+                    borderRadius: '10px',
+                    border: '1px solid #CBD5E1',
+                    background: 'var(--white)',
+                    fontSize: '0.95rem',
+                    outline: 'none',
+                    transition: 'var(--transition)'
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAdminPassword(p => !p)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--blue)',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    padding: '4px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {showAdminPassword ? '🙈 Hide' : '👁 Show'}
+                </button>
+              </div>
             </div>
 
             <div className="mform-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
