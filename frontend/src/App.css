@@ -3019,6 +3019,7 @@ ul { list-style: none; }
 }
 
 .notice-bar-content {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -3063,6 +3064,36 @@ ul { list-style: none; }
 .notice-bar-close:hover {
   color: #fff;
   transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+  .regulatory-notice-bar {
+    padding: 14px 16px;
+  }
+  .notice-bar-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .notice-bar-text {
+    padding-right: 28px;
+    font-size: 0.75rem;
+  }
+  .notice-bar-links {
+    flex-wrap: wrap;
+    gap: 10px;
+    white-space: normal;
+  }
+  .notice-bar-close {
+    position: absolute;
+    top: -2px;
+    right: 0;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+  }
 }
 
 /* CMS Editor Layout */
