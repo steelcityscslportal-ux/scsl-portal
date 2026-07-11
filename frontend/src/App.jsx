@@ -3055,19 +3055,42 @@ function HomepageCMSTab({ authHeader, cmsContent = {}, onCMSUpdate }) {
     );
   };
 
+  const cmsNavItems = [
+    { key: 'hero1',        label: '🔥 Hero Slide 1' },
+    { key: 'hero2',        label: '📢 Hero Slide 2' },
+    { key: 'hero3',        label: '🏆 Hero Slide 3' },
+    { key: 'stats',        label: '📊 Trust Stats' },
+    { key: 'why_webinars', label: '💡 Why Webinars' },
+    { key: 'services',     label: '🛠 Services' },
+    { key: 'ceo',          label: '💼 CEO Details' },
+    { key: 'about',        label: '📖 About Section' },
+    { key: 'contact',      label: '📞 Contact Details' },
+  ];
+
   return (
     <div className="cms-editor-container">
+      {/* ── Desktop Sidebar ── */}
       <div className="cms-sidebar">
         <h4 style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Homepage Sections</h4>
-        <button className={`cms-sidebar-btn ${subTab === 'hero1' ? 'active' : ''}`} onClick={() => setSubTab('hero1')}>🔥 Hero Slide 1</button>
-        <button className={`cms-sidebar-btn ${subTab === 'hero2' ? 'active' : ''}`} onClick={() => setSubTab('hero2')}>📢 Hero Slide 2</button>
-        <button className={`cms-sidebar-btn ${subTab === 'hero3' ? 'active' : ''}`} onClick={() => setSubTab('hero3')}>🏆 Hero Slide 3</button>
-        <button className={`cms-sidebar-btn ${subTab === 'stats' ? 'active' : ''}`} onClick={() => setSubTab('stats')}>📊 Trust Stats</button>
-        <button className={`cms-sidebar-btn ${subTab === 'why_webinars' ? 'active' : ''}`} onClick={() => setSubTab('why_webinars')}>💡 Why Webinars</button>
-        <button className={`cms-sidebar-btn ${subTab === 'services' ? 'active' : ''}`} onClick={() => setSubTab('services')}>🛠 Services</button>
-        <button className={`cms-sidebar-btn ${subTab === 'ceo' ? 'active' : ''}`} onClick={() => setSubTab('ceo')}>💼 CEO Details</button>
-        <button className={`cms-sidebar-btn ${subTab === 'about' ? 'active' : ''}`} onClick={() => setSubTab('about')}>📖 About Section</button>
-        <button className={`cms-sidebar-btn ${subTab === 'contact' ? 'active' : ''}`} onClick={() => setSubTab('contact')}>📞 Contact Details</button>
+        {cmsNavItems.map(item => (
+          <button key={item.key} className={`cms-sidebar-btn ${subTab === item.key ? 'active' : ''}`} onClick={() => setSubTab(item.key)}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Mobile Dropdown Selector (hidden on desktop) ── */}
+      <div className="cms-mobile-select-wrap">
+        <label className="cms-mobile-select-label">📋 Select Section to Edit</label>
+        <select
+          className="cms-mobile-select"
+          value={subTab}
+          onChange={e => setSubTab(e.target.value)}
+        >
+          {cmsNavItems.map(item => (
+            <option key={item.key} value={item.key}>{item.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="cms-content-area">
@@ -6391,10 +6414,12 @@ function Footer() {
 /* ═══════════════════════════════════════════════
    14. FLOATING CTA
    ═══════════════════════════════════════════════ */
-function FloatingCTA() {
+function FloatingCTA({ page }) {
   const [show, setShow] = useState(false);
   useEffect(() => { const t = setTimeout(() => setShow(true), 3000); return () => clearTimeout(t); }, []);
-  if (!show) return null;
+  // Hide on admin, CRM, legal pages where it blocks forms
+  const adminPages = ['leads', 'crm', 'privacy', 'disclaimer', 'investor-charter'];
+  if (!show || adminPages.includes(page)) return null;
   return (
     <motion.a href="#webinars" className="floating-cta" initial={{ opacity: 0, scale: 0.8, x: 100 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ type: 'spring' }}>
       <Calendar size={14} /><span>Register for Free Webinar</span>
@@ -6501,7 +6526,7 @@ export default function App() {
         {page === 'investor-charter' && <InvestorCharter onBackClick={() => { window.location.hash = ''; setPage('home'); }} />}
       </main>
       <Footer />
-      <FloatingCTA />
+      <FloatingCTA page={page} />
       
       <AnimatePresence>
         {registeringWebinar && (
