@@ -4632,6 +4632,12 @@ function LeadsAdminPage({ cmsContent = {}, onCMSUpdate }) {
     }
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeTab]);
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     
